@@ -1,15 +1,17 @@
-// This is a private fork of the work done by Anchit Chandra Sekhar (https://github.com/anchit92)
+// This is a private fork of the work done by Anchit Chandra Sekhar
+// (https://github.com/anchit92) Some minor changes have been made to fix minor
+// bugs, externalize settings, and introduce a BLE toggle.
 //
 #include "config.h"
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
-#include <Wire.h>
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
+#include <Wire.h>
 #ifdef BLE_ENABLED
+#include <BLE2902.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
-#include <BLE2902.h>
 #endif
 
 SFE_UBLOX_GNSS myGNSS;
@@ -68,19 +70,36 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks {
 #endif // BLE_ENABLED
 
 // --- UBX Packet Construction Helpers ---
-void writeLittleEndian(uint8_t* buffer, int offset, uint32_t value) { memcpy(buffer + offset, &value, 4); }
-void writeLittleEndian(uint8_t* buffer, int offset, int32_t value)  { memcpy(buffer + offset, &value, 4); }
-void writeLittleEndian(uint8_t* buffer, int offset, uint16_t value) { memcpy(buffer + offset, &value, 2); }
-void writeLittleEndian(uint8_t* buffer, int offset, int16_t value)  { memcpy(buffer + offset, &value, 2); }
-void writeLittleEndian(uint8_t* buffer, int offset, uint8_t value)  { buffer[offset] = value; }
-void writeLittleEndian(uint8_t* buffer, int offset, int8_t value)   { buffer[offset] = (uint8_t)value; }
+void writeLittleEndian(uint8_t *buffer, int offset, uint32_t value) {
+  memcpy(buffer + offset, &value, 4);
+}
+void writeLittleEndian(uint8_t *buffer, int offset, int32_t value) {
+  memcpy(buffer + offset, &value, 4);
+}
+void writeLittleEndian(uint8_t *buffer, int offset, uint16_t value) {
+  memcpy(buffer + offset, &value, 2);
+}
+void writeLittleEndian(uint8_t *buffer, int offset, int16_t value) {
+  memcpy(buffer + offset, &value, 2);
+}
+void writeLittleEndian(uint8_t *buffer, int offset, uint8_t value) {
+  buffer[offset] = value;
+}
+void writeLittleEndian(uint8_t *buffer, int offset, int8_t value) {
+  buffer[offset] = (uint8_t)value;
+}
 
-void calculateChecksum(uint8_t* payload, uint16_t len, uint8_t cls, uint8_t id, uint8_t* ckA, uint8_t* ckB) {
+void calculateChecksum(uint8_t *payload, uint16_t len, uint8_t cls, uint8_t id,
+                       uint8_t *ckA, uint8_t *ckB) {
   *ckA = *ckB = 0;
-  *ckA += cls; *ckB += *ckA;
-  *ckA += id; *ckB += *ckA;
-  *ckA += len & 0xFF; *ckB += *ckA;
-  *ckA += len >> 8; *ckB += *ckA;
+  *ckA += cls;
+  *ckB += *ckA;
+  *ckA += id;
+  *ckB += *ckA;
+  *ckA += len & 0xFF;
+  *ckB += *ckA;
+  *ckA += len >> 8;
+  *ckB += *ckA;
   for (uint16_t i = 0; i < len; i++) {
     *ckA += payload[i];
     *ckB += *ckA;
@@ -96,8 +115,10 @@ void resetGpsBaudRate() {
     Serial.print("u-blox GNSS not detected at ");
     Serial.print(FACTORY_GPS_BAUD);
     Serial.println(" baud.");
-    Serial.print("u-blox GNSS not detected, Check documentation for factory baud rate and/or check your wiring");
-    while(1) delay(100);
+    Serial.print("u-blox GNSS not detected, Check documentation for factory "
+                 "baud rate and/or check your wiring");
+    while (1)
+      delay(100);
   } else {
     Serial.print("GNSS detected at ");
     Serial.print(FACTORY_GPS_BAUD);
@@ -123,8 +144,10 @@ void resetGpsBaudRate() {
     Serial.print("GNSS not detected at ");
     Serial.print(GPS_BAUD);
     Serial.println(" baud.");
-    Serial.print("u-blox GNSS not detected, Check documentation for factory baud rate and/or check your wiring");
-    while (1) delay(100);
+    Serial.print("u-blox GNSS not detected, Check documentation for factory "
+                 "baud rate and/or check your wiring");
+    while (1)
+      delay(100);
   }
   Serial.print("GNSS detected at ");
   Serial.print(GPS_BAUD);
@@ -138,7 +161,8 @@ void setup() {
   pinMode(ONBOARD_LED_PIN, OUTPUT);
   if (!mpu.begin()) {
     Serial.println("❌ Failed to find MPU6050 chip");
-    while (1) delay(100);
+    while (1)
+      delay(100);
   }
   mpu.setAccelerometerRange(ACCEL_RANGE);
   mpu.setGyroRange(GYRO_RANGE);
@@ -162,86 +186,86 @@ void setup() {
   // Set GNSS output to PVT only
   myGNSS.setAutoPVT(true);
   myGNSS.setDynamicModel(GPS_DYNAMIC_MODEL);
-    // --- Configure GPS update rate to MAX_NAVIGATION_RATE Hz ---
+  // --- Configure GPS update rate to MAX_NAVIGATION_RATE Hz ---
   if (myGNSS.setNavigationFrequency(MAX_NAVIGATION_RATE)) {
-  Serial.printf("✅ GPS update rate set to %d Hz.\n",MAX_NAVIGATION_RATE );
+    Serial.printf("✅ GPS update rate set to %d Hz.\n", MAX_NAVIGATION_RATE);
   } else {
     Serial.println("❌ Failed to set GPS update rate.");
   }
 
-  // --- GNSS Constellation Setup ---
+// --- GNSS Constellation Setup ---
 
-  // GPS
-  #ifdef ENABLE_GNSS_GPS
-    if (myGNSS.enableGNSS(true, SFE_UBLOX_GNSS_ID_GPS)) {
-      Serial.println("✅ GPS enabled.");
-    } else {
-      Serial.println("❌ Failed to enable GPS.");
-    }
-  #else
-    myGNSS.enableGNSS(false, SFE_UBLOX_GNSS_ID_GPS);
-    Serial.println("🚫 GPS disabled.");
-  #endif
+// GPS
+#ifdef ENABLE_GNSS_GPS
+  if (myGNSS.enableGNSS(true, SFE_UBLOX_GNSS_ID_GPS)) {
+    Serial.println("✅ GPS enabled.");
+  } else {
+    Serial.println("❌ Failed to enable GPS.");
+  }
+#else
+  myGNSS.enableGNSS(false, SFE_UBLOX_GNSS_ID_GPS);
+  Serial.println("🚫 GPS disabled.");
+#endif
 
-  // Galileo
-  #ifdef ENABLE_GNSS_GALILEO
-    if (myGNSS.enableGNSS(true, SFE_UBLOX_GNSS_ID_GALILEO)) {
-      Serial.println("✅ Galileo enabled.");
-    } else {
-      Serial.println("❌ Failed to enable Galileo.");
-    }
-  #else
-    myGNSS.enableGNSS(false, SFE_UBLOX_GNSS_ID_GALILEO);
-    Serial.println("🚫 Galileo disabled.");
-  #endif
+// Galileo
+#ifdef ENABLE_GNSS_GALILEO
+  if (myGNSS.enableGNSS(true, SFE_UBLOX_GNSS_ID_GALILEO)) {
+    Serial.println("✅ Galileo enabled.");
+  } else {
+    Serial.println("❌ Failed to enable Galileo.");
+  }
+#else
+  myGNSS.enableGNSS(false, SFE_UBLOX_GNSS_ID_GALILEO);
+  Serial.println("🚫 Galileo disabled.");
+#endif
 
-  // GLONASS
-  #ifdef ENABLE_GNSS_GLONASS
-    if (myGNSS.enableGNSS(true, SFE_UBLOX_GNSS_ID_GLONASS)) {
-      Serial.println("✅ GLONASS enabled.");
-    } else {
-      Serial.println("❌ Failed to enable GLONASS.");
-    }
-  #else
-    myGNSS.enableGNSS(false, SFE_UBLOX_GNSS_ID_GLONASS);
-    Serial.println("🚫 GLONASS disabled.");
-  #endif
+// Optional: GLONASS
+#ifdef ENABLE_GNSS_GLONASS
+  if (myGNSS.enableGNSS(true, SFE_UBLOX_GNSS_ID_GLONASS)) {
+    Serial.println("✅ GLONASS enabled.");
+  } else {
+    Serial.println("❌ Failed to enable GLONASS.");
+  }
+#else
+  myGNSS.enableGNSS(false, SFE_UBLOX_GNSS_ID_GLONASS);
+  Serial.println("🚫 GLONASS disabled.");
+#endif
 
-  // BeiDou
-  #ifdef ENABLE_GNSS_BEIDOU
-    if (myGNSS.enableGNSS(true, SFE_UBLOX_GNSS_ID_BEIDOU)) {
-      Serial.println("✅ BEIDOU enabled.");
-    } else {
-      Serial.println("❌ Failed to enable BEIDOU.");
-    }
-  #else
-    myGNSS.enableGNSS(false, SFE_UBLOX_GNSS_ID_BEIDOU);
-    Serial.println("🚫 BEIDOU disabled.");
-  #endif
+// Optional: BeiDou
+#ifdef ENABLE_GNSS_BEIDOU
+  if (myGNSS.enableGNSS(true, SFE_UBLOX_GNSS_ID_BEIDOU)) {
+    Serial.println("✅ BEIDOU enabled.");
+  } else {
+    Serial.println("❌ Failed to enable BEIDOU.");
+  }
+#else
+  myGNSS.enableGNSS(false, SFE_UBLOX_GNSS_ID_BEIDOU);
+  Serial.println("🚫 BEIDOU disabled.");
+#endif
 
-  // Optional: QZSS
-  #ifdef ENABLE_GNSS_QZSS
-    if (myGNSS.enableGNSS(true, SFE_UBLOX_GNSS_ID_QZSS)) {
-      Serial.println("✅ QZSS enabled.");
-    } else {
-      Serial.println("❌ Failed to enable QZSS.");
-    }
-  #else
-    myGNSS.enableGNSS(false, SFE_UBLOX_GNSS_ID_QZSS);
-    Serial.println("🚫 QZSS disabled.");
-  #endif
+// Optional: QZSS
+#ifdef ENABLE_GNSS_QZSS
+  if (myGNSS.enableGNSS(true, SFE_UBLOX_GNSS_ID_QZSS)) {
+    Serial.println("✅ QZSS enabled.");
+  } else {
+    Serial.println("❌ Failed to enable QZSS.");
+  }
+#else
+  myGNSS.enableGNSS(false, SFE_UBLOX_GNSS_ID_QZSS);
+  Serial.println("🚫 QZSS disabled.");
+#endif
 
-  // Optional: SBAS (satellite-based augmentation)
-  #ifdef ENABLE_GNSS_SBAS
-    if (myGNSS.enableGNSS(true, SFE_UBLOX_GNSS_ID_SBAS)) {
-      Serial.println("✅ SBAS enabled.");
-    } else {
-      Serial.println("❌ Failed to enable SBAS.");
-    }
-  #else
-    myGNSS.enableGNSS(false, SFE_UBLOX_GNSS_ID_SBAS);
-    Serial.println("🚫 SBAS disabled.");
-  #endif
+// Optional: SBAS (satellite-based augmentation)
+#ifdef ENABLE_GNSS_SBAS
+  if (myGNSS.enableGNSS(true, SFE_UBLOX_GNSS_ID_SBAS)) {
+    Serial.println("✅ SBAS enabled.");
+  } else {
+    Serial.println("❌ Failed to enable SBAS.");
+  }
+#else
+  myGNSS.enableGNSS(false, SFE_UBLOX_GNSS_ID_SBAS);
+  Serial.println("🚫 SBAS disabled.");
+#endif
 
 #ifdef BLE_ENABLED
   // --- BLE Setup ---
@@ -250,32 +274,42 @@ void setup() {
   pServer->setCallbacks(new MyServerCallbacks());
 
   BLEService *pService = pServer->createService(RACEBOX_SERVICE_UUID);
-  pCharacteristicTx = pService->createCharacteristic(RACEBOX_CHARACTERISTIC_TX_UUID, BLECharacteristic::PROPERTY_NOTIFY);
+  pCharacteristicTx = pService->createCharacteristic(
+      RACEBOX_CHARACTERISTIC_TX_UUID, BLECharacteristic::PROPERTY_NOTIFY);
   pCharacteristicTx->addDescriptor(new BLE2902());
-  pCharacteristicRx = pService->createCharacteristic(RACEBOX_CHARACTERISTIC_RX_UUID, BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR);
+  pCharacteristicRx = pService->createCharacteristic(
+      RACEBOX_CHARACTERISTIC_RX_UUID,
+      BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR);
   pCharacteristicRx->setCallbacks(new MyCharacteristicCallbacks());
   pService->start();
   // --- Device Information Service ---
-  BLEService *pDeviceInfo = pServer->createService("0000180a-0000-1000-8000-00805f9b34fb");
+  BLEService *pDeviceInfo =
+      pServer->createService("0000180a-0000-1000-8000-00805f9b34fb");
   // Model
-  BLECharacteristic *pModel = pDeviceInfo->createCharacteristic("00002a24-0000-1000-8000-00805f9b34fb", BLECharacteristic::PROPERTY_READ);
+  BLECharacteristic *pModel = pDeviceInfo->createCharacteristic(
+      "00002a24-0000-1000-8000-00805f9b34fb", BLECharacteristic::PROPERTY_READ);
   pModel->setValue(MODEL);
   // Serial number — the 10-digit device ID from config.h
-  BLECharacteristic *pSerial = pDeviceInfo->createCharacteristic("00002a25-0000-1000-8000-00805f9b34fb", BLECharacteristic::PROPERTY_READ);
+  BLECharacteristic *pSerial = pDeviceInfo->createCharacteristic(
+      "00002a25-0000-1000-8000-00805f9b34fb", BLECharacteristic::PROPERTY_READ);
   pSerial->setValue(String(DEVICE_ID).c_str());
   // Firmware revision
-  BLECharacteristic *pFirm = pDeviceInfo->createCharacteristic("00002a26-0000-1000-8000-00805f9b34fb", BLECharacteristic::PROPERTY_READ);
+  BLECharacteristic *pFirm = pDeviceInfo->createCharacteristic(
+      "00002a26-0000-1000-8000-00805f9b34fb", BLECharacteristic::PROPERTY_READ);
   pFirm->setValue(FIRMWARE_VERSION);
   // Hardware revision
-  BLECharacteristic *pHardware = pDeviceInfo->createCharacteristic("00002a27-0000-1000-8000-00805f9b34fb", BLECharacteristic::PROPERTY_READ);
+  BLECharacteristic *pHardware = pDeviceInfo->createCharacteristic(
+      "00002a27-0000-1000-8000-00805f9b34fb", BLECharacteristic::PROPERTY_READ);
   pHardware->setValue(HARDWARE_VERSION);
   // Manufacturer
-  BLECharacteristic *pManufacturer = pDeviceInfo->createCharacteristic("00002a29-0000-1000-8000-00805f9b34fb", BLECharacteristic::PROPERTY_READ);
+  BLECharacteristic *pManufacturer = pDeviceInfo->createCharacteristic(
+      "00002a29-0000-1000-8000-00805f9b34fb", BLECharacteristic::PROPERTY_READ);
   pManufacturer->setValue(MANUFACTURER);
   pDeviceInfo->start();
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(RACEBOX_SERVICE_UUID);
-  // Advertise Device Information Service to help official apps discover the device
+  // Advertise Device Information Service to help official apps discover the
+  // device
   pAdvertising->addServiceUUID("0000180a-0000-1000-8000-00805f9b34fb");
   pAdvertising->setScanResponse(true);
   BLEDevice::startAdvertising();
@@ -297,9 +331,12 @@ void loop() {
     mpu.getEvent(&a, &g, &temp);
 
     // Apply Exponential Moving Average (Complementary Filter logic)
-    filtered_ax = (ACCEL_ALPHA * a.acceleration.x) + ((1.0 - ACCEL_ALPHA) * filtered_ax);
-    filtered_ay = (ACCEL_ALPHA * a.acceleration.y) + ((1.0 - ACCEL_ALPHA) * filtered_ay);
-    filtered_az = (ACCEL_ALPHA * a.acceleration.z) + ((1.0 - ACCEL_ALPHA) * filtered_az);
+    filtered_ax =
+        (ACCEL_ALPHA * a.acceleration.x) + ((1.0 - ACCEL_ALPHA) * filtered_ax);
+    filtered_ay =
+        (ACCEL_ALPHA * a.acceleration.y) + ((1.0 - ACCEL_ALPHA) * filtered_ay);
+    filtered_az =
+        (ACCEL_ALPHA * a.acceleration.z) + ((1.0 - ACCEL_ALPHA) * filtered_az);
 
     filtered_gx = (GYRO_ALPHA * g.gyro.x) + ((1.0 - GYRO_ALPHA) * filtered_gx);
     filtered_gy = (GYRO_ALPHA * g.gyro.y) + ((1.0 - GYRO_ALPHA) * filtered_gy);
@@ -350,10 +387,14 @@ void loop() {
 
         // Offset 11: Validity Flags (RaceBox Protocol)
         uint8_t raceboxValidityFlags = 0;
-        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validDate)    raceboxValidityFlags |= (1 << 0); // Bit 0: valid date
-        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validTime)    raceboxValidityFlags |= (1 << 1); // Bit 1: valid time
-        if (myGNSS.packetUBXNAVPVT->data.valid.bits.fullyResolved) raceboxValidityFlags |= (1 << 2); // Bit 2: fully resolved
-        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validMag)  raceboxValidityFlags |= (1 << 3); // Bit 3: valid magnetic declination
+        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validDate)
+          raceboxValidityFlags |= (1 << 0); // Bit 0: valid date
+        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validTime)
+          raceboxValidityFlags |= (1 << 1); // Bit 1: valid time
+        if (myGNSS.packetUBXNAVPVT->data.valid.bits.fullyResolved)
+          raceboxValidityFlags |= (1 << 2); // Bit 2: fully resolved
+        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validMag)
+          raceboxValidityFlags |= (1 << 3); // Bit 3: valid magnetic declination
         writeLittleEndian(payload, 11, raceboxValidityFlags);
 
         // Offset 12: Time Accuracy (RaceBox Protocol)
@@ -365,27 +406,36 @@ void loop() {
         // Offset 20: Fix Status (RaceBox Protocol)
         // Protocol only defines 0 (no fix), 2 (2D fix), 3 (3D fix) — clamp any
         // other u-blox fix types (e.g. 1=DR only, 4=GNSS+DR) to 0 (no fix).
-        uint8_t safeFixType = (myGNSS.packetUBXNAVPVT->data.fixType == 2 || myGNSS.packetUBXNAVPVT->data.fixType == 3)
-                              ? myGNSS.packetUBXNAVPVT->data.fixType : 0;
+        uint8_t safeFixType = (myGNSS.packetUBXNAVPVT->data.fixType == 2 ||
+                               myGNSS.packetUBXNAVPVT->data.fixType == 3)
+                                  ? myGNSS.packetUBXNAVPVT->data.fixType
+                                  : 0;
         writeLittleEndian(payload, 20, safeFixType);
 
         // Offset 21: Fix Status Flags (RaceBox Protocol)
         uint8_t fixStatusFlagsRacebox = 0;
 
         if (myGNSS.packetUBXNAVPVT->data.fixType == 3) {
-            fixStatusFlagsRacebox |= (1 << 0); // Bit 0: valid fix
+          fixStatusFlagsRacebox |= (1 << 0); // Bit 0: valid fix
         }
 
-        if (myGNSS.getHeadVehValid()) { // Use the confirmed function to check for valid heading
-            fixStatusFlagsRacebox |= (1 << 5); // Bit 5: valid heading (as per RaceBox Protocol)
+        if (myGNSS.getHeadVehValid()) { // Use the confirmed function to check
+                                        // for valid heading
+          fixStatusFlagsRacebox |=
+              (1 << 5); // Bit 5: valid heading (as per RaceBox Protocol)
         }
         writeLittleEndian(payload, 21, fixStatusFlagsRacebox);
 
         // Offset 22: Date/Time Flags (RaceBox Protocol)
         uint8_t raceboxDateTimeFlags = 0;
-        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validTime) raceboxDateTimeFlags |= (1 << 5); // Available confirmation of Date/Time Validity
-        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validDate) raceboxDateTimeFlags |= (1 << 6); // Confirmed UTC Date Validity
-        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validTime && myGNSS.packetUBXNAVPVT->data.valid.bits.fullyResolved) raceboxDateTimeFlags |= (1 << 7); // Confirmed UTC Time Validity
+        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validTime)
+          raceboxDateTimeFlags |=
+              (1 << 5); // Available confirmation of Date/Time Validity
+        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validDate)
+          raceboxDateTimeFlags |= (1 << 6); // Confirmed UTC Date Validity
+        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validTime &&
+            myGNSS.packetUBXNAVPVT->data.valid.bits.fullyResolved)
+          raceboxDateTimeFlags |= (1 << 7); // Confirmed UTC Time Validity
         writeLittleEndian(payload, 22, raceboxDateTimeFlags);
 
         // Offset 23: Number of SVs (RaceBox Protocol)
@@ -408,12 +458,15 @@ void loop() {
 
         // Offset 66: Lat/Lon Flags (RaceBox Protocol)
         uint8_t latLonFlags = 0;
-        if (myGNSS.packetUBXNAVPVT->data.fixType < 2) { // If no 2D/3D fix, then coordinates are considered invalid
-            latLonFlags |= (1 << 0); // Bit 0: Invalid Latitude, Longitude, WGS Altitude, and MSL Altitude
+        if (myGNSS.packetUBXNAVPVT->data.fixType <
+            2) { // If no 2D/3D fix, then coordinates are considered invalid
+          latLonFlags |= (1 << 0); // Bit 0: Invalid Latitude, Longitude, WGS
+                                   // Altitude, and MSL Altitude
         }
         writeLittleEndian(payload, 66, latLonFlags);
 
-        // Offset 67: Battery status (1 byte) - report 100% to avoid low battery warnings
+        // Offset 67: Battery status (1 byte) - report 100% to avoid low battery
+        // warnings
         writeLittleEndian(payload, 67, (uint8_t)BATTERY_REPORT_PERCENT);
 
         writeLittleEndian(payload, 68, gX);
@@ -442,7 +495,6 @@ void loop() {
 #endif // BLE_ENABLED
       }
     }
-
   }
 
   // Report packet send rate — runs regardless of GPS state
@@ -451,7 +503,8 @@ void loop() {
     float elapsed = (now - lastGpsRateCheckTime) / 1000.0;
     float bleRate = gpsUpdateCount / elapsed;
     float gnssRate = gnssUpdateCount / elapsed;
-    // Additional satellite info for debugging: number of satellites, fix type, horizontal accuracy, and lat/lon
+    // Additional satellite info for debugging: number of satellites, fix type,
+    // horizontal accuracy, and lat/lon
     uint8_t sats = 0;
     uint8_t fix = 0;
     uint32_t hAcc = 0;
@@ -470,8 +523,11 @@ void loop() {
     int16_t dispRX = filtered_gx * 180.0 / M_PI * 100.0;
     int16_t dispRY = filtered_gy * 180.0 / M_PI * 100.0;
     int16_t dispRZ = filtered_gz * 180.0 / M_PI * 100.0;
-    Serial.printf("BLE Rate: %.2f Hz | GNSS Rate: %.2f Hz | SV: %u | Fix: %u | HAcc: %u mm | Lat: %.7f Lon: %.7f | milliG: X=%d Y=%d Z=%d | centiDeg/s: X=%d Y=%d Z=%d\n",
-                  bleRate, gnssRate, sats, fix, hAcc, lat, lon, dispGX, dispGY, dispGZ, dispRX, dispRY, dispRZ);
+    Serial.printf("BLE Rate: %.2f Hz | GNSS Rate: %.2f Hz | SV: %u | Fix: %u | "
+                  "HAcc: %u mm | Lat: %.7f Lon: %.7f | milliG: X=%d Y=%d Z=%d "
+                  "| centiDeg/s: X=%d Y=%d Z=%d\n",
+                  bleRate, gnssRate, sats, fix, hAcc, lat, lon, dispGX, dispGY,
+                  dispGZ, dispRX, dispRY, dispRZ);
     gpsUpdateCount = 0;
     gnssUpdateCount = 0;
     lastGpsRateCheckTime = now;

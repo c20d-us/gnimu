@@ -7,7 +7,7 @@
 // Change DEVICE_ID to personalize your device. Must be 10 digits and less
 // than 4000000000 — the RaceBox app will not connect to IDs of 4000000000
 // or higher.
-#define DEVICE_ID         2064591255UL
+#define DEVICE_ID         3608675309UL
 #define FIRMWARE_VERSION  "3.3"
 #define HARDWARE_VERSION  "1"
 #define MANUFACTURER      "RaceBox"
@@ -34,12 +34,12 @@
 // Enable only the constellations your module supports and your region benefits from.
 // Enabling too many can reduce the update rate below 25Hz on some modules.
 // Reference: https://app.qzss.go.jp/GNSSView/gnssview.html
-#define ENABLE_GNSS_GPS       // Essential - always enable
-#define ENABLE_GNSS_GALILEO   // Strong at northern latitudes
+#define ENABLE_GNSS_GPS         // Essential - always enable
+#define ENABLE_GNSS_GALILEO     // Strong at northern latitudes
 // #define ENABLE_GNSS_GLONASS  // Not supported by M10 hardware
-// #define ENABLE_GNSS_BEIDOU   // Marginal benefit at 122°W — try it if GPS+Galileo rate holds at 25Hz
-// #define ENABLE_GNSS_SBAS     // Can reduce update rate
-// #define ENABLE_GNSS_QZSS     // Invisible from Washington State
+// #define ENABLE_GNSS_BEIDOU   // Marginal at 122°W — try GPS+Galileo rate holds at 25Hz - Not supported by M10 hardware
+// #define ENABLE_GNSS_SBAS     // Can reduce update rate - Not supported by M10 hardware
+// #define ENABLE_GNSS_QZSS     // Invisible from US PNW - Not supported by M10 hardware
 
 // ============================================================================
 // --- IMU SETTINGS ---
@@ -59,7 +59,7 @@
 #define BLE_ENABLED                    // Comment out to disable BLE (e.g. to test GPS reception without RF interference)
 #define BLE_MTU_SIZE             128   // Bytes — must be >= 91 to carry an 88-byte notify
 #define BLE_READVERTISE_DELAY_MS 500   // ms delay before re-advertising after disconnect
-#define LED_BLINK_INTERVAL_MS    500   // ms — LED blink rate while waiting for a BLE connection
+#define LED_BLINK_INTERVAL_MS    1000  // ms — LED blink rate while waiting for a BLE connection
 
 // ============================================================================
 // --- TIMING & REPORTING ---
