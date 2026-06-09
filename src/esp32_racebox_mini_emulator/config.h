@@ -4,62 +4,87 @@
 // --- DEVICE IDENTITY ---
 // ============================================================================
 
-// Change DEVICE_ID to personalize your device. Must be 10 digits and less
-// than 4000000000 — the RaceBox app will not connect to IDs of 4000000000
-// or higher.
-#define DEVICE_ID         3608675309UL
-#define FIRMWARE_VERSION  "3.3"
-#define HARDWARE_VERSION  "1"
-#define MANUFACTURER      "RaceBox"
-#define MODEL             "RaceBox Mini"
+// Change DEVICE_ID to personalize your device.
+// Must be 10 digits and less than 4000000000.
+// The RaceBox app will not connect to IDs of 4000000000 or higher.
+#define DEVICE_ID 3608675309UL
+#define FIRMWARE_VERSION "3.3"
+#define HARDWARE_VERSION "1"
+#define MANUFACTURER "RaceBox"
+#define MODEL "RaceBox Mini"
 
 // ============================================================================
 // --- HARDWARE PINS ---
 // ============================================================================
 
-#define GPS_RX_PIN       16
-#define GPS_TX_PIN       17
-#define ONBOARD_LED_PIN   2
+#define GPS_RX_PIN 16
+#define GPS_TX_PIN 17
+#define ONBOARD_LED_PIN 2
 
 // ============================================================================
 // --- GPS / GNSS SETTINGS ---
 // ============================================================================
 
-#define GPS_BAUD             115200
-#define FACTORY_GPS_BAUD     115200
-#define MAX_NAVIGATION_RATE      25   // Hz — maximum supported by RaceBox Mini protocol
-#define GPS_DYNAMIC_MODEL   DYN_MODEL_AUTOMOTIVE
+#define GPS_BAUD 115200
+#define FACTORY_GPS_BAUD 115200
+#define MAX_NAVIGATION_RATE 25 // Hz — max supported by RaceBox Mini protocol
+#define GPS_DYNAMIC_MODEL DYN_MODEL_AUTOMOTIVE
 
 // --- GNSS Constellation Toggles ---
-// Enable only the constellations your module supports and your region benefits from.
-// Enabling too many can reduce the update rate below 25Hz on some modules.
-// Reference: https://app.qzss.go.jp/GNSSView/gnssview.html
-#define ENABLE_GNSS_GPS         // Essential - always enable
-#define ENABLE_GNSS_GALILEO     // Strong at northern latitudes
+// Enable only the constellations your module supports and your region benefits
+// from. Enabling too many can reduce the update rate below 25Hz on some
+// modules. Reference: https://app.qzss.go.jp/GNSSView/gnssview.html
+
+#define ENABLE_GNSS_GPS
+#define ENABLE_GNSS_GALILEO
 // #define ENABLE_GNSS_GLONASS  // Not supported by M10 hardware
-// #define ENABLE_GNSS_BEIDOU   // Marginal at 122°W — try GPS+Galileo rate holds at 25Hz - Not supported by M10 hardware
-// #define ENABLE_GNSS_SBAS     // Can reduce update rate - Not supported by M10 hardware
-// #define ENABLE_GNSS_QZSS     // Invisible from US PNW - Not supported by M10 hardware
+// #define ENABLE_GNSS_BEIDOU   // Not supported by M10 hardware
+// #define ENABLE_GNSS_SBAS     // Not supported by M10 hardware
+// #define ENABLE_GNSS_QZSS     // Not supported by M10 hardware
 
 // ============================================================================
 // --- IMU SETTINGS ---
 // ============================================================================
 
-#define ACCEL_SAMPLE_INTERVAL_MS  10              // 10ms = 100Hz sample rate
-#define ACCEL_ALPHA               0.8f            // EMA smoothing: 1.0 = raw, 0.5 = moderate
-#define GYRO_ALPHA                0.8f            // EMA smoothing: 1.0 = raw, 0.5 = moderate
-#define ACCEL_RANGE               MPU6050_RANGE_8_G
-#define GYRO_RANGE                MPU6050_RANGE_500_DEG
-#define FILTER_BANDWIDTH          MPU6050_BAND_21_HZ
+// Comment out to disable gyro bias calibration at startup.
+// When enabled, the device must be stationary during the first second of boot.
+#define GYRO_CALIBRATION_ENABLED
+
+// Number of calibration samples to average (10ms each)
+#define GYRO_CALIBRATION_SAMPLES 100
+
+#define ACCEL_SAMPLE_INTERVAL_MS 10 // 10ms = 100Hz sample rate
+#define ACCEL_ALPHA 0.8f            // EMA smoothing: 1.0 = raw, 0.5 = moderate
+#define GYRO_ALPHA 0.8f             // EMA smoothing: 1.0 = raw, 0.5 = moderate
+#define ACCEL_RANGE MPU6050_RANGE_8_G
+#define GYRO_RANGE MPU6050_RANGE_500_DEG
+#define FILTER_BANDWIDTH MPU6050_BAND_21_HZ
 
 // ============================================================================
 // --- BLE SETTINGS ---
 // ============================================================================
 
-#define BLE_ENABLED                    // Comment out to disable BLE (e.g. to test GPS reception without RF interference)
-#define BLE_MTU_SIZE             128   // Bytes — must be >= 91 to carry an 88-byte notify
-#define BLE_READVERTISE_DELAY_MS 500   // ms delay before re-advertising after disconnect
-#define LED_BLINK_INTERVAL_MS    1000  // ms — LED blink rate while waiting for a BLE connection
+// Comment out to disable BLE (e.g. to test GPS without RF interference)
+#define BLE_ENABLED
+
+// BLE Transmit Power
+// Select one of the following levels by assigning it to BLE_TX_POWER.
+// Lower power reduces potential RF interference with the GNSS module.
+// The receiver will usually be close, so high power is not needed.
+// If you have connection drop troubles, try increasing the power level.
+//   ESP_PWR_LVL_N12  =  -12 dBm  (lowest — ~125x less power than default)
+//   ESP_PWR_LVL_N9   =   -9 dBm
+//   ESP_PWR_LVL_N6   =   -6 dBm
+//   ESP_PWR_LVL_N3   =   -3 dBm
+//   ESP_PWR_LVL_N0   =    0 dBm
+//   ESP_PWR_LVL_P3   =   +3 dBm
+//   ESP_PWR_LVL_P6   =   +6 dBm
+//   ESP_PWR_LVL_P9   =   +9 dBm  (default ESP32 power)
+#define BLE_TX_POWER ESP_PWR_LVL_N12
+
+#define BLE_MTU_SIZE 128 // Bytes — must be >= 91 to carry an 88-byte notify
+#define BLE_READVERTISE_DELAY_MS 500 // ms - delay before re-advertising
+#define LED_BLINK_INTERVAL_MS 1000   // ms - LED blink rate when disconnected
 
 // ============================================================================
 // --- TIMING & REPORTING ---
@@ -72,10 +97,10 @@
 // These match the RaceBox BLE protocol and should not be changed.
 // ============================================================================
 
-#define RACEBOX_SERVICE_UUID            "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
-#define RACEBOX_CHARACTERISTIC_TX_UUID  "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
-#define RACEBOX_CHARACTERISTIC_RX_UUID  "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
-#define BATTERY_REPORT_PERCENT          100   // No battery circuit — always report 100%
+#define RACEBOX_SERVICE_UUID "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
+#define RACEBOX_CHARACTERISTIC_TX_UUID "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
+#define RACEBOX_CHARACTERISTIC_RX_UUID "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
+#define BATTERY_REPORT_PERCENT 100 // No battery circuit — always report 100%
 
 // ============================================================================
 // --- COMPILE-TIME VALIDATION ---
@@ -83,14 +108,15 @@
 
 // Enforce device ID range
 static_assert(DEVICE_ID >= 1000000000UL && DEVICE_ID <= 3999999999UL,
-    "ERROR: DEVICE_ID must be a 10-digit number between 1000000000 and 3999999999.");
+              "ERROR: DEVICE_ID must be a 10-digit number between 1000000000 "
+              "and 3999999999.");
 
 // Enforce sane EMA alpha range
 static_assert(ACCEL_ALPHA > 0.0f && ACCEL_ALPHA <= 1.0f,
-    "ERROR: ACCEL_ALPHA must be in the range (0.0, 1.0]");
+              "ERROR: ACCEL_ALPHA must be in the range (0.0, 1.0]");
 static_assert(GYRO_ALPHA > 0.0f && GYRO_ALPHA <= 1.0f,
-    "ERROR: GYRO_ALPHA must be in the range (0.0, 1.0]");
+              "ERROR: GYRO_ALPHA must be in the range (0.0, 1.0]");
 
 // Enforce navigation rate limit
 static_assert(MAX_NAVIGATION_RATE > 0 && MAX_NAVIGATION_RATE <= 25,
-    "ERROR: MAX_NAVIGATION_RATE must be between 1 and 25 Hz.");
+              "ERROR: MAX_NAVIGATION_RATE must be between 1 and 25 Hz.");

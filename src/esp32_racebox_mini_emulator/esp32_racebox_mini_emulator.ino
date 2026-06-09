@@ -1,6 +1,11 @@
 // This is a private fork of the work done by Anchit Chandra Sekhar
-// (https://github.com/anchit92) Some minor changes have been made to fix minor
-// bugs, externalize settings, and introduce a BLE toggle.
+// Original source is at https://github.com/anchit92
+// Some minor changes have been made:
+//  - Fixed some bugs
+//  - Externalized settings to config.h
+//  - Introduced a BLE toggle
+//  - Introduced adjustability to BLE power levels
+//  - Added gyro calibration
 //
 #include "config.h"
 #include <Adafruit_MPU6050.h>
@@ -23,6 +28,10 @@ Adafruit_MPU6050 mpu;
 // Storage for the filtered values
 float filtered_ax = 0, filtered_ay = 0, filtered_az = 0;
 float filtered_gx = 0, filtered_gy = 0, filtered_gz = 0;
+
+// Gyro bias offsets — measured at startup, subtracted from every reading.
+// Initialized to 0.0 so they are safe no-ops when calibration is disabled.
+float gyro_bias_x = 0.0f, gyro_bias_y = 0.0f, gyro_bias_z = 0.0f;
 
 #ifdef BLE_ENABLED
 BLEServer *pServer = NULL;
@@ -156,13 +165,39 @@ void resetGpsBaudRate() {
   GPS_Serial.end();
 }
 
+#ifdef GYRO_CALIBRATION_ENABLED
+void calibrateGyro() {
+  Serial.println("⏳ Gyro calibration starting — keep device still...");
+  double sumX = 0, sumY = 0, sumZ = 0;
+  sensors_event_t a, g, temp;
+  for (int i = 0; i < GYRO_CALIBRATION_SAMPLES; i++) {
+    mpu.getEvent(&a, &g, &temp);
+    sumX += g.gyro.x;
+    sumY += g.gyro.y;
+    sumZ += g.gyro.z;
+    delay(ACCEL_SAMPLE_INTERVAL_MS);
+  }
+  gyro_bias_x = sumX / GYRO_CALIBRATION_SAMPLES;
+  gyro_bias_y = sumY / GYRO_CALIBRATION_SAMPLES;
+  gyro_bias_z = sumZ / GYRO_CALIBRATION_SAMPLES;
+  Serial.printf(
+      "✅ Gyro calibration complete. Bias: X=%.4f Y=%.4f Z=%.4f rad/s\n",
+      gyro_bias_x, gyro_bias_y, gyro_bias_z);
+}
+#endif // GYRO_CALIBRATION_ENABLED
+
 void setup() {
   Serial.begin(115200);
+  delay(500); // Allow USB serial to enumerate before sending any output
+
   pinMode(ONBOARD_LED_PIN, OUTPUT);
+
   if (!mpu.begin()) {
     Serial.println("❌ Failed to find MPU6050 chip");
     while (1)
       delay(100);
+  } else {
+    Serial.println("✅ MPU6050 Acceleromter/Gyro enabled.");
   }
   mpu.setAccelerometerRange(ACCEL_RANGE);
   mpu.setGyroRange(GYRO_RANGE);
@@ -174,6 +209,11 @@ void setup() {
   filtered_ax = a.acceleration.x;
   filtered_ay = a.acceleration.y;
   filtered_az = a.acceleration.z;
+
+// Calibrate the MPU6050
+#ifdef GYRO_CALIBRATION_ENABLED
+  calibrateGyro();
+#endif
 
   GPS_Serial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
   if (!myGNSS.begin(GPS_Serial)) {
@@ -270,6 +310,18 @@ void setup() {
 #ifdef BLE_ENABLED
   // --- BLE Setup ---
   BLEDevice::init(deviceName.c_str());
+  BLEDevice::setPower(BLE_TX_POWER);
+  {
+    int requestedDbm = (BLE_TX_POWER * 3) - 12;
+    int actualDbm = BLEDevice::getPower();
+    if (actualDbm == requestedDbm) {
+      Serial.printf("✅ BLE TX power set to %d dBm.\n", actualDbm);
+    } else {
+      Serial.printf(
+          "⚠️  BLE TX power mismatch — requested %d dBm, got %d dBm.\n",
+          requestedDbm, actualDbm);
+    }
+  }
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
 
@@ -338,9 +390,12 @@ void loop() {
     filtered_az =
         (ACCEL_ALPHA * a.acceleration.z) + ((1.0 - ACCEL_ALPHA) * filtered_az);
 
-    filtered_gx = (GYRO_ALPHA * g.gyro.x) + ((1.0 - GYRO_ALPHA) * filtered_gx);
-    filtered_gy = (GYRO_ALPHA * g.gyro.y) + ((1.0 - GYRO_ALPHA) * filtered_gy);
-    filtered_gz = (GYRO_ALPHA * g.gyro.z) + ((1.0 - GYRO_ALPHA) * filtered_gz);
+    filtered_gx = (GYRO_ALPHA * (g.gyro.x - gyro_bias_x)) +
+                  ((1.0 - GYRO_ALPHA) * filtered_gx);
+    filtered_gy = (GYRO_ALPHA * (g.gyro.y - gyro_bias_y)) +
+                  ((1.0 - GYRO_ALPHA) * filtered_gy);
+    filtered_gz = (GYRO_ALPHA * (g.gyro.z - gyro_bias_z)) +
+                  ((1.0 - GYRO_ALPHA) * filtered_gz);
   }
   // LED Blink Logic
   if (!deviceConnected) {
