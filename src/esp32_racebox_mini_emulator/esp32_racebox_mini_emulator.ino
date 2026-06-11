@@ -1,6 +1,6 @@
 // This is a private fork of the work done by Anchit Chandra Sekhar
 // Original source is at https://github.com/anchit92
-// Some minor changes have been made:
+// Some changes have been made:
 //  - Fixed some bugs
 //  - Externalized settings to config.h
 //  - Added adjustability of BLE power levels
@@ -9,9 +9,9 @@
 //
 // Settings live in config.h. The hardware/protocol logic lives in the module
 // files (imu, gnss, ble, telemetry); this sketch is just orchestration.
-#include "imu.h"
-#include "gnss.h"
 #include "ble.h"
+#include "gnss.h"
+#include "imu.h"
 #include "telemetry.h"
 
 void setup() {
