@@ -4,13 +4,15 @@
 [![Platform: ESP32](https://img.shields.io/badge/platform-ESP32-000000.svg)](https://www.espressif.com/en/products/socs/esp32)
 [![Language: C++ (Arduino)](https://img.shields.io/badge/language-C%2B%2B%20(Arduino)-00599C.svg)](https://www.arduino.cc/)
 
-Turn an ESP32, a GNSS module, and an MPU6050 into a device that looks and behaves
-like a **[RaceBox Mini](https://www.racebox.pro/)** GPS performance meter — so the
-official RaceBox app (and other RaceBox-compatible tools) connect to it over
-Bluetooth Low Energy and read live position, speed, and motion data.
+Turns an ESP32, a GNSS module, and an MPU6050 into a device that looks and behaves
+like a **[RaceBox Mini](https://www.racebox.pro/)** GPS performance meter. The
+official RaceBox app and other RaceBox-compatible tools can connect to it over
+Bluetooth Low Energy (BLE) and read live position, speed, and motion data.
 
-It is a low-cost, hackable platform for experimenting with GNSS data logging,
-the RaceBox BLE protocol, and sensor fusion — built from off-the-shelf parts.
+This is a low-cost, hackable platform for experimenting with GNSS data logging,
+the RaceBox BLE protocol, and sensor fusion built from off-the-shelf parts.
+
+I originally started this project as an emulator built for use with the [AutoX Data Logger for iOS](https://autoxdrivermod.com) app.
 
 > [!IMPORTANT]
 > **Unofficial project.** This is an independent, educational implementation. It is
