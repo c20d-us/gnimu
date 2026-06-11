@@ -93,7 +93,7 @@ Photos of the reference build, from loose components to the finished, enclosed u
 
 <div align="center">
   <img src="images/completed-emulator.jpeg" alt="The finished RaceBox Mini emulator" width="520"><br>
-  <sub>The completed emulator, decorated with the stickers that came with the GNSS module<br>and an indicator of which end points forward (for Gyro/Accelerometer)</sub>
+  <sub>The completed emulator, decorated with the stickers that came with the GNSS module<br>and an indicator of which end points forward (for Gyro/Accelerometer)</sub><br>&nbsp;
 </div>
 
 <table>
