@@ -160,7 +160,8 @@ Photos of the reference build, from loose components to the finished, enclosed u
 5. Click **Upload**.
 6. Open the **Serial Monitor** at **115200 baud** to watch the startup and status output.
 
-> **Note**: If you are building on an Apple Silicon Mac, you can use the AS_native Arduino IDE but you **must** have Rosetta installed in order to correctly compile the ESP32 binary. Without Rosetta installed you will get a compilation error.
+> [!IMPORTANT]
+> If you are building on an Apple Silicon Mac, you can use the AS-native Arduino IDE but you **must** have Rosetta installed in order to correctly compile the ESP32 binary. Without Rosetta installed you will get a compilation error.
 ---
 
 ## Configuration
