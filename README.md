@@ -114,7 +114,7 @@ Photos of the reference build, from loose components to the finished, enclosed u
     </td>
     <td align="center" width="50%">
       <img src="images/assembled-without-shield.jpeg" alt="Assembly without the RF shield" width="340"><br>
-      <sub>Assembled, using hardening epoxy putty<br>to firmly affix the components</sub><br>&nbsp;
+      <sub>Assembled, using hardening epoxy putty<br>to firmly affix the components</sub>
     </td>
   </tr>
   <tr>
