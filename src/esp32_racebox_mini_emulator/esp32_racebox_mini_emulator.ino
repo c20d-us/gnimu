@@ -3,21 +3,19 @@
 // Some minor changes have been made:
 //  - Fixed some bugs
 //  - Externalized settings to config.h
-//  - Added a BLE toggle
 //  - Added adjustability of BLE power levels
 //  - Added gyro calibration
 //
 #include "config.h"
+#include "ubx_helpers.h"
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
-#include <SparkFun_u-blox_GNSS_Arduino_Library.h>
-#include <Wire.h>
-#ifdef BLE_ENABLED
 #include <BLE2902.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
-#endif
+#include <SparkFun_u-blox_GNSS_Arduino_Library.h>
+#include <Wire.h>
 
 SFE_UBLOX_GNSS myGNSS;
 HardwareSerial GPS_Serial(2);
@@ -33,11 +31,20 @@ float filtered_gx = 0, filtered_gy = 0, filtered_gz = 0;
 // Initialized to 0.0 so they are safe no-ops when calibration is disabled.
 float gyro_bias_x = 0.0f, gyro_bias_y = 0.0f, gyro_bias_z = 0.0f;
 
-#ifdef BLE_ENABLED
+// The filtered IMU values converted to RaceBox protocol units.
+// NOTE: this struct must be defined up here, above the first function, because
+// Arduino auto-generates function prototypes and inserts them just before the
+// first function. readImuProtocolUnits() returns this type, so the type has to
+// be visible at that insertion point — a definition lower down would be too
+// late and you'd get "'ImuProtocolUnits' does not name a type".
+struct ImuProtocolUnits {
+  int16_t gX, gY, gZ; // acceleration, milli-g
+  int16_t rX, rY, rZ; // rotation rate, centi-deg/sec
+};
+
 BLEServer *pServer = NULL;
 BLECharacteristic *pCharacteristicTx = NULL;
 BLECharacteristic *pCharacteristicRx = NULL;
-#endif
 volatile bool deviceConnected = false;
 volatile bool oldDeviceConnected = false;
 
@@ -46,7 +53,6 @@ unsigned long lastGpsRateCheckTime = 0;
 volatile unsigned int gpsUpdateCount = 0;
 volatile unsigned int gnssUpdateCount = 0;
 
-#ifdef BLE_ENABLED
 // --- BLE Callbacks ---
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer *pServer) {
@@ -76,44 +82,6 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks {
     }
   }
 };
-#endif // BLE_ENABLED
-
-// --- UBX Packet Construction Helpers ---
-void writeLittleEndian(uint8_t *buffer, int offset, uint32_t value) {
-  memcpy(buffer + offset, &value, 4);
-}
-void writeLittleEndian(uint8_t *buffer, int offset, int32_t value) {
-  memcpy(buffer + offset, &value, 4);
-}
-void writeLittleEndian(uint8_t *buffer, int offset, uint16_t value) {
-  memcpy(buffer + offset, &value, 2);
-}
-void writeLittleEndian(uint8_t *buffer, int offset, int16_t value) {
-  memcpy(buffer + offset, &value, 2);
-}
-void writeLittleEndian(uint8_t *buffer, int offset, uint8_t value) {
-  buffer[offset] = value;
-}
-void writeLittleEndian(uint8_t *buffer, int offset, int8_t value) {
-  buffer[offset] = (uint8_t)value;
-}
-
-void calculateChecksum(uint8_t *payload, uint16_t len, uint8_t cls, uint8_t id,
-                       uint8_t *ckA, uint8_t *ckB) {
-  *ckA = *ckB = 0;
-  *ckA += cls;
-  *ckB += *ckA;
-  *ckA += id;
-  *ckB += *ckA;
-  *ckA += len & 0xFF;
-  *ckB += *ckA;
-  *ckA += len >> 8;
-  *ckB += *ckA;
-  for (uint16_t i = 0; i < len; i++) {
-    *ckA += payload[i];
-    *ckB += *ckA;
-  }
-}
 
 void resetGpsBaudRate() {
   Serial.println("Attempting to set Correct Baud Rate");
@@ -312,7 +280,6 @@ void setup() {
   calibrateGyro();
 #endif
 
-#ifdef BLE_ENABLED
   // --- BLE Setup ---
   BLEDevice::init(deviceName.c_str());
   BLEDevice::setPower(BLE_TX_POWER);
@@ -371,15 +338,12 @@ void setup() {
   pAdvertising->setScanResponse(true);
   BLEDevice::startAdvertising();
   Serial.println("📡 BLE advertising started.");
-#else
-  Serial.println("📵 BLE disabled — GNSS/IMU running in serial-only mode.");
-#endif // BLE_ENABLED
 
   lastGpsRateCheckTime = millis();
 }
 
-void loop() {
-  myGNSS.checkUblox(); // Required to keep GNSS data flowing
+// --- Read the IMU and update the smoothed accel/gyro values ---
+void updateImuFilters() {
   static unsigned long lastAccelReadMs = 0;
   // Update Accelerometer readings at fixed interval
   if (millis() - lastAccelReadMs >= ACCEL_SAMPLE_INTERVAL_MS) {
@@ -402,7 +366,10 @@ void loop() {
     filtered_gz = (GYRO_ALPHA * (g.gyro.z - gyro_bias_z)) +
                   ((1.0 - GYRO_ALPHA) * filtered_gz);
   }
-  // LED Blink Logic
+}
+
+// --- Blink the onboard LED when disconnected, solid when connected ---
+void updateLedStatus() {
   if (!deviceConnected) {
     static unsigned long lastBlinkMs = 0;
     if (millis() - lastBlinkMs > LED_BLINK_INTERVAL_MS) {
@@ -412,151 +379,168 @@ void loop() {
   } else {
     digitalWrite(ONBOARD_LED_PIN, HIGH);
   }
-  if (myGNSS.getPVT() && myGNSS.packetUBXNAVPVT != NULL) {
-    static uint32_t lastITOW = 0;
-    uint32_t currentITOW = myGNSS.packetUBXNAVPVT->data.iTOW;
+}
 
-    if (currentITOW != lastITOW) {
-      lastITOW = currentITOW;
-      gnssUpdateCount++;
+// Convert the current filtered IMU values into RaceBox protocol units.
+ImuProtocolUnits readImuProtocolUnits() {
+  ImuProtocolUnits u;
+  // Convert accelerometer to milli-g (1g = 9.80665 m/s^2)
+  u.gX = filtered_ax * 1000.0 / 9.80665;
+  u.gY = filtered_ay * 1000.0 / 9.80665;
+  u.gZ = filtered_az * 1000.0 / 9.80665;
+  // Convert gyro to centi-deg/sec
+  u.rX = filtered_gx * 180.0 / M_PI * 100.0;
+  u.rY = filtered_gy * 180.0 / M_PI * 100.0;
+  u.rZ = filtered_gz * 180.0 / M_PI * 100.0;
+  return u;
+}
 
-      if (deviceConnected) {
-        gpsUpdateCount++;
+// --- Assemble an 88-byte RaceBox Data Message from the latest GNSS + IMU data.
+// Fills packet[0..87] with the UBX header, 80-byte payload, and checksum. ---
+void buildRaceBoxPacket(uint8_t *packet) {
+  ImuProtocolUnits imu = readImuProtocolUnits();
 
-        // Convert accelerometer to milli-g (1g = 9.80665 m/s^2)
-        int16_t gX = filtered_ax * 1000.0 / 9.80665;
-        int16_t gY = filtered_ay * 1000.0 / 9.80665;
-        int16_t gZ = filtered_az * 1000.0 / 9.80665;
+  uint8_t payload[80] = {0};
 
-        // Convert gyro to centi-deg/sec
-        int16_t rX = filtered_gx * 180.0 / M_PI * 100.0;
-        int16_t rY = filtered_gy * 180.0 / M_PI * 100.0;
-        int16_t rZ = filtered_gz * 180.0 / M_PI * 100.0;
+  // Access data directly from myGNSS.packetUBXNAVPVT->data
+  writeLittleEndian(payload, 0, myGNSS.packetUBXNAVPVT->data.iTOW);
+  writeLittleEndian(payload, 4, myGNSS.packetUBXNAVPVT->data.year);
+  writeLittleEndian(payload, 6, myGNSS.packetUBXNAVPVT->data.month);
+  writeLittleEndian(payload, 7, myGNSS.packetUBXNAVPVT->data.day);
+  writeLittleEndian(payload, 8, myGNSS.packetUBXNAVPVT->data.hour);
+  writeLittleEndian(payload, 9, myGNSS.packetUBXNAVPVT->data.min);
+  writeLittleEndian(payload, 10, myGNSS.packetUBXNAVPVT->data.sec);
 
-        uint8_t payload[80] = {0};
-        uint8_t packet[88] = {0};
+  // Offset 11: Validity Flags (RaceBox Protocol)
+  uint8_t raceboxValidityFlags = 0;
+  if (myGNSS.packetUBXNAVPVT->data.valid.bits.validDate)
+    raceboxValidityFlags |= (1 << 0); // Bit 0: valid date
+  if (myGNSS.packetUBXNAVPVT->data.valid.bits.validTime)
+    raceboxValidityFlags |= (1 << 1); // Bit 1: valid time
+  if (myGNSS.packetUBXNAVPVT->data.valid.bits.fullyResolved)
+    raceboxValidityFlags |= (1 << 2); // Bit 2: fully resolved
+  if (myGNSS.packetUBXNAVPVT->data.valid.bits.validMag)
+    raceboxValidityFlags |= (1 << 3); // Bit 3: valid magnetic declination
+  writeLittleEndian(payload, 11, raceboxValidityFlags);
 
-        // Access data directly from myGNSS.packetUBXNAVPVT->data
-        writeLittleEndian(payload, 0, myGNSS.packetUBXNAVPVT->data.iTOW);
-        writeLittleEndian(payload, 4, myGNSS.packetUBXNAVPVT->data.year);
-        writeLittleEndian(payload, 6, myGNSS.packetUBXNAVPVT->data.month);
-        writeLittleEndian(payload, 7, myGNSS.packetUBXNAVPVT->data.day);
-        writeLittleEndian(payload, 8, myGNSS.packetUBXNAVPVT->data.hour);
-        writeLittleEndian(payload, 9, myGNSS.packetUBXNAVPVT->data.min);
-        writeLittleEndian(payload, 10, myGNSS.packetUBXNAVPVT->data.sec);
+  // Offset 12: Time Accuracy (RaceBox Protocol)
+  writeLittleEndian(payload, 12, myGNSS.packetUBXNAVPVT->data.tAcc);
 
-        // Offset 11: Validity Flags (RaceBox Protocol)
-        uint8_t raceboxValidityFlags = 0;
-        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validDate)
-          raceboxValidityFlags |= (1 << 0); // Bit 0: valid date
-        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validTime)
-          raceboxValidityFlags |= (1 << 1); // Bit 1: valid time
-        if (myGNSS.packetUBXNAVPVT->data.valid.bits.fullyResolved)
-          raceboxValidityFlags |= (1 << 2); // Bit 2: fully resolved
-        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validMag)
-          raceboxValidityFlags |= (1 << 3); // Bit 3: valid magnetic declination
-        writeLittleEndian(payload, 11, raceboxValidityFlags);
+  // Offset 16: Nanoseconds (RaceBox Protocol)
+  writeLittleEndian(payload, 16, myGNSS.packetUBXNAVPVT->data.nano);
 
-        // Offset 12: Time Accuracy (RaceBox Protocol)
-        writeLittleEndian(payload, 12, myGNSS.packetUBXNAVPVT->data.tAcc);
+  // Offset 20: Fix Status (RaceBox Protocol)
+  // Protocol only defines 0 (no fix), 2 (2D fix), 3 (3D fix) — clamp any
+  // other u-blox fix types (e.g. 1=DR only, 4=GNSS+DR) to 0 (no fix).
+  uint8_t safeFixType = (myGNSS.packetUBXNAVPVT->data.fixType == 2 ||
+                         myGNSS.packetUBXNAVPVT->data.fixType == 3)
+                            ? myGNSS.packetUBXNAVPVT->data.fixType
+                            : 0;
+  writeLittleEndian(payload, 20, safeFixType);
 
-        // Offset 16: Nanoseconds (RaceBox Protocol)
-        writeLittleEndian(payload, 16, myGNSS.packetUBXNAVPVT->data.nano);
+  // Offset 21: Fix Status Flags (RaceBox Protocol)
+  uint8_t fixStatusFlagsRacebox = 0;
 
-        // Offset 20: Fix Status (RaceBox Protocol)
-        // Protocol only defines 0 (no fix), 2 (2D fix), 3 (3D fix) — clamp any
-        // other u-blox fix types (e.g. 1=DR only, 4=GNSS+DR) to 0 (no fix).
-        uint8_t safeFixType = (myGNSS.packetUBXNAVPVT->data.fixType == 2 ||
-                               myGNSS.packetUBXNAVPVT->data.fixType == 3)
-                                  ? myGNSS.packetUBXNAVPVT->data.fixType
-                                  : 0;
-        writeLittleEndian(payload, 20, safeFixType);
-
-        // Offset 21: Fix Status Flags (RaceBox Protocol)
-        uint8_t fixStatusFlagsRacebox = 0;
-
-        if (myGNSS.packetUBXNAVPVT->data.fixType == 3) {
-          fixStatusFlagsRacebox |= (1 << 0); // Bit 0: valid fix
-        }
-
-        if (myGNSS.getHeadVehValid()) { // Use the confirmed function to check
-                                        // for valid heading
-          fixStatusFlagsRacebox |=
-              (1 << 5); // Bit 5: valid heading (as per RaceBox Protocol)
-        }
-        writeLittleEndian(payload, 21, fixStatusFlagsRacebox);
-
-        // Offset 22: Date/Time Flags (RaceBox Protocol)
-        uint8_t raceboxDateTimeFlags = 0;
-        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validTime)
-          raceboxDateTimeFlags |=
-              (1 << 5); // Available confirmation of Date/Time Validity
-        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validDate)
-          raceboxDateTimeFlags |= (1 << 6); // Confirmed UTC Date Validity
-        if (myGNSS.packetUBXNAVPVT->data.valid.bits.validTime &&
-            myGNSS.packetUBXNAVPVT->data.valid.bits.fullyResolved)
-          raceboxDateTimeFlags |= (1 << 7); // Confirmed UTC Time Validity
-        writeLittleEndian(payload, 22, raceboxDateTimeFlags);
-
-        // Offset 23: Number of SVs (RaceBox Protocol)
-        writeLittleEndian(payload, 23, myGNSS.packetUBXNAVPVT->data.numSV);
-
-        // Remaining fields, mostly direct mappings from u-blox data
-        writeLittleEndian(payload, 24, myGNSS.packetUBXNAVPVT->data.lon);
-        writeLittleEndian(payload, 28, myGNSS.packetUBXNAVPVT->data.lat);
-        writeLittleEndian(payload, 32, myGNSS.packetUBXNAVPVT->data.height);
-        writeLittleEndian(payload, 36, myGNSS.packetUBXNAVPVT->data.hMSL);
-
-        writeLittleEndian(payload, 40, myGNSS.packetUBXNAVPVT->data.hAcc);
-        writeLittleEndian(payload, 44, myGNSS.packetUBXNAVPVT->data.vAcc);
-        writeLittleEndian(payload, 48, myGNSS.packetUBXNAVPVT->data.gSpeed);
-        writeLittleEndian(payload, 52, myGNSS.packetUBXNAVPVT->data.headMot);
-        writeLittleEndian(payload, 56, myGNSS.packetUBXNAVPVT->data.sAcc);
-        writeLittleEndian(payload, 60, myGNSS.packetUBXNAVPVT->data.headAcc);
-
-        writeLittleEndian(payload, 64, myGNSS.packetUBXNAVPVT->data.pDOP);
-
-        // Offset 66: Lat/Lon Flags (RaceBox Protocol)
-        uint8_t latLonFlags = 0;
-        if (myGNSS.packetUBXNAVPVT->data.fixType <
-            2) { // If no 2D/3D fix, then coordinates are considered invalid
-          latLonFlags |= (1 << 0); // Bit 0: Invalid Latitude, Longitude, WGS
-                                   // Altitude, and MSL Altitude
-        }
-        writeLittleEndian(payload, 66, latLonFlags);
-
-        // Offset 67: Battery status (1 byte) - report 100% to avoid low battery
-        // warnings
-        writeLittleEndian(payload, 67, (uint8_t)BATTERY_REPORT_PERCENT);
-
-        writeLittleEndian(payload, 68, gX);
-        writeLittleEndian(payload, 70, gY);
-        writeLittleEndian(payload, 72, gZ);
-        writeLittleEndian(payload, 74, rX);
-        writeLittleEndian(payload, 76, rY);
-        writeLittleEndian(payload, 78, rZ);
-
-        // Wrap in UBX (standard RaceBox header and checksum)
-        packet[0] = 0xB5;
-        packet[1] = 0x62;
-        packet[2] = 0xFF; // Message Class: RaceBox Data Message
-        packet[3] = 0x01; // Message ID: RaceBox Data Message
-        packet[4] = 80;   // Payload size
-        packet[5] = 0;
-        memcpy(packet + 6, payload, 80);
-        uint8_t ckA, ckB;
-        calculateChecksum(payload, 80, 0xFF, 0x01, &ckA, &ckB);
-        packet[86] = ckA;
-        packet[87] = ckB;
-
-#ifdef BLE_ENABLED
-        pCharacteristicTx->setValue(packet, 88);
-        pCharacteristicTx->notify();
-#endif // BLE_ENABLED
-      }
-    }
+  if (myGNSS.packetUBXNAVPVT->data.fixType == 3) {
+    fixStatusFlagsRacebox |= (1 << 0); // Bit 0: valid fix
   }
 
+  if (myGNSS.getHeadVehValid()) { // Use the confirmed function to check
+                                  // for valid heading
+    fixStatusFlagsRacebox |=
+        (1 << 5); // Bit 5: valid heading (as per RaceBox Protocol)
+  }
+  writeLittleEndian(payload, 21, fixStatusFlagsRacebox);
+
+  // Offset 22: Date/Time Flags (RaceBox Protocol)
+  uint8_t raceboxDateTimeFlags = 0;
+  if (myGNSS.packetUBXNAVPVT->data.valid.bits.validTime)
+    raceboxDateTimeFlags |=
+        (1 << 5); // Available confirmation of Date/Time Validity
+  if (myGNSS.packetUBXNAVPVT->data.valid.bits.validDate)
+    raceboxDateTimeFlags |= (1 << 6); // Confirmed UTC Date Validity
+  if (myGNSS.packetUBXNAVPVT->data.valid.bits.validTime &&
+      myGNSS.packetUBXNAVPVT->data.valid.bits.fullyResolved)
+    raceboxDateTimeFlags |= (1 << 7); // Confirmed UTC Time Validity
+  writeLittleEndian(payload, 22, raceboxDateTimeFlags);
+
+  // Offset 23: Number of SVs (RaceBox Protocol)
+  writeLittleEndian(payload, 23, myGNSS.packetUBXNAVPVT->data.numSV);
+
+  // Remaining fields, mostly direct mappings from u-blox data
+  writeLittleEndian(payload, 24, myGNSS.packetUBXNAVPVT->data.lon);
+  writeLittleEndian(payload, 28, myGNSS.packetUBXNAVPVT->data.lat);
+  writeLittleEndian(payload, 32, myGNSS.packetUBXNAVPVT->data.height);
+  writeLittleEndian(payload, 36, myGNSS.packetUBXNAVPVT->data.hMSL);
+
+  writeLittleEndian(payload, 40, myGNSS.packetUBXNAVPVT->data.hAcc);
+  writeLittleEndian(payload, 44, myGNSS.packetUBXNAVPVT->data.vAcc);
+  writeLittleEndian(payload, 48, myGNSS.packetUBXNAVPVT->data.gSpeed);
+  writeLittleEndian(payload, 52, myGNSS.packetUBXNAVPVT->data.headMot);
+  writeLittleEndian(payload, 56, myGNSS.packetUBXNAVPVT->data.sAcc);
+  writeLittleEndian(payload, 60, myGNSS.packetUBXNAVPVT->data.headAcc);
+
+  writeLittleEndian(payload, 64, myGNSS.packetUBXNAVPVT->data.pDOP);
+
+  // Offset 66: Lat/Lon Flags (RaceBox Protocol)
+  uint8_t latLonFlags = 0;
+  if (myGNSS.packetUBXNAVPVT->data.fixType <
+      2) { // If no 2D/3D fix, then coordinates are considered invalid
+    latLonFlags |= (1 << 0); // Bit 0: Invalid Latitude, Longitude, WGS
+                             // Altitude, and MSL Altitude
+  }
+  writeLittleEndian(payload, 66, latLonFlags);
+
+  // Offset 67: Battery status (1 byte) - report 100% to avoid low battery
+  // warnings
+  writeLittleEndian(payload, 67, (uint8_t)BATTERY_REPORT_PERCENT);
+
+  writeLittleEndian(payload, 68, imu.gX);
+  writeLittleEndian(payload, 70, imu.gY);
+  writeLittleEndian(payload, 72, imu.gZ);
+  writeLittleEndian(payload, 74, imu.rX);
+  writeLittleEndian(payload, 76, imu.rY);
+  writeLittleEndian(payload, 78, imu.rZ);
+
+  // Wrap in UBX (standard RaceBox header and checksum)
+  packet[0] = 0xB5;
+  packet[1] = 0x62;
+  packet[2] = 0xFF; // Message Class: RaceBox Data Message
+  packet[3] = 0x01; // Message ID: RaceBox Data Message
+  packet[4] = 80;   // Payload size
+  packet[5] = 0;
+  memcpy(packet + 6, payload, 80);
+  uint8_t ckA, ckB;
+  calculateChecksum(payload, 80, 0xFF, 0x01, &ckA, &ckB);
+  packet[86] = ckA;
+  packet[87] = ckB;
+}
+
+// --- On each new GNSS epoch, count it and (when connected) send a packet ---
+void sendRaceBoxPacketIfReady() {
+  if (!(myGNSS.getPVT() && myGNSS.packetUBXNAVPVT != NULL))
+    return;
+
+  static uint32_t lastITOW = 0;
+  uint32_t currentITOW = myGNSS.packetUBXNAVPVT->data.iTOW;
+  if (currentITOW == lastITOW)
+    return; // Same epoch — nothing new to send
+  lastITOW = currentITOW;
+  gnssUpdateCount++;
+
+  if (!deviceConnected)
+    return;
+  gpsUpdateCount++;
+
+  uint8_t packet[88] = {0};
+  buildRaceBoxPacket(packet);
+
+  pCharacteristicTx->setValue(packet, 88);
+  pCharacteristicTx->notify();
+}
+
+// --- Periodically print packet rate and GNSS/IMU debug stats over serial ---
+void reportStatus() {
   // Report packet send rate — runs regardless of GPS state
   const unsigned long now = millis();
   if ((now - lastGpsRateCheckTime) >= GPS_RATE_REPORT_INTERVAL_MS) {
@@ -577,23 +561,20 @@ void loop() {
       lon = myGNSS.packetUBXNAVPVT->data.lon * 1e-7;
     }
     // Convert filtered IMU values to protocol units for display
-    int16_t dispGX = filtered_ax * 1000.0 / 9.80665;
-    int16_t dispGY = filtered_ay * 1000.0 / 9.80665;
-    int16_t dispGZ = filtered_az * 1000.0 / 9.80665;
-    int16_t dispRX = filtered_gx * 180.0 / M_PI * 100.0;
-    int16_t dispRY = filtered_gy * 180.0 / M_PI * 100.0;
-    int16_t dispRZ = filtered_gz * 180.0 / M_PI * 100.0;
+    ImuProtocolUnits imu = readImuProtocolUnits();
     Serial.printf("BLE Rate: %.2f Hz | GNSS Rate: %.2f Hz | SV: %u | Fix: %u | "
                   "HAcc: %u mm | Lat: %.7f Lon: %.7f | milliG: X=%d Y=%d Z=%d "
                   "| centiDeg/s: X=%d Y=%d Z=%d\n",
-                  bleRate, gnssRate, sats, fix, hAcc, lat, lon, dispGX, dispGY,
-                  dispGZ, dispRX, dispRY, dispRZ);
+                  bleRate, gnssRate, sats, fix, hAcc, lat, lon, imu.gX, imu.gY,
+                  imu.gZ, imu.rX, imu.rY, imu.rZ);
     gpsUpdateCount = 0;
     gnssUpdateCount = 0;
     lastGpsRateCheckTime = now;
   }
+}
 
-#ifdef BLE_ENABLED
+// --- Re-advertise after a disconnect; track connection edges ---
+void handleBleConnectionState() {
   // BLE connection state management — runs regardless of GPS state
   if (!deviceConnected && oldDeviceConnected) {
     delay(BLE_READVERTISE_DELAY_MS);
@@ -603,5 +584,13 @@ void loop() {
   if (deviceConnected && !oldDeviceConnected) {
     oldDeviceConnected = deviceConnected;
   }
-#endif // BLE_ENABLED
+}
+
+void loop() {
+  myGNSS.checkUblox(); // Required to keep GNSS data flowing
+  updateImuFilters();
+  updateLedStatus();
+  sendRaceBoxPacketIfReady();
+  reportStatus();
+  handleBleConnectionState();
 }

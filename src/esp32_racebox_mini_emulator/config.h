@@ -68,9 +68,6 @@
 // --- BLE SETTINGS ---
 // ============================================================================
 
-// Comment out to disable BLE (e.g. to test GPS without RF interference)
-#define BLE_ENABLED
-
 // BLE Transmit Power
 // Select one of the following levels by assigning it to BLE_TX_POWER.
 // Lower power reduces potential RF interference with the GNSS module.
