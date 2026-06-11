@@ -49,10 +49,11 @@ flowchart LR
 
 | Part | Notes |
 |------|-------|
-| **ESP32 dev board** | Developed on an ESP32-WROOM DevKit V1 (30-pin). See [`Documentation/`](Documentation/) for the pinout. |
-| **u-blox GNSS module** | A u-blox **M10**-class receiver. Reference unit: HGLRC M100-5883 (datasheet in [`Documentation/`](Documentation/)). Other u-blox modules supported by the SparkFun library should work. |
-| **MPU6050** | I²C 6-axis accelerometer + gyroscope breakout. |
-| Jumper wires, breadboard | For prototyping. |
+| [**ESP32 dev board**](https://www.amazon.com/dp/B0DF2YJSHN) | Developed on an ESP32-WROOM DevKit V1 (30-pin). See [`Documentation/`](Documentation/) for the pinout. |
+| [**u-blox GNSS module**](https://www.amazon.com/dp/B0CB5N8RQ8) | A u-blox **M10**-class receiver. Reference unit: HGLRC M100-5883 (datasheet in [`Documentation/`](Documentation/)). Other u-blox modules supported by the SparkFun library should work. |
+| [**MPU6050**](https://www.amazon.com/dp/B01DK83ZYQ) | I²C 6-axis accelerometer + gyroscope breakout. Reference unit: HiLetgo GY-521 MPU-6050 (datasheet in [`Documentation/`](Documentation/)). |
+|[**Project Box**](https://www.amazon.com/dp/B0BQYPKRQS)| ABS Plastic Project Case, White, 3.15 x 1.97 x 1.02 inch (80 x 50x 26 mm). You need to cut holes into this box to fit your specific board and component layout (see images below). |
+|[**Nylon M2.5 hex standoffs**](https://www.amazon.com/dp/B0FPMC9917) | Nylon hex standoffs, washers, nuts, screws, to help with orienting the components within the project box. |
 
 ### Wiring
 
@@ -71,7 +72,7 @@ flowchart LR
 |-------------|-----------|
 | SDA         | GPIO21 (default I²C SDA) |
 | SCL         | GPIO22 (default I²C SCL) |
-| VCC         | VIN |
+| VCC         | VIN (5V pin) |
 | GND         | GND |
 
 **Status LED:** the onboard LED (GPIO2) blinks while waiting for a BLE connection
@@ -80,6 +81,61 @@ and stays solid once a client is connected.
 > Pin assignments for the GNSS UART and the LED are configurable in
 > [`config.h`](src/esp32_racebox_mini_emulator/config.h). The MPU6050 uses the
 > ESP32's default I²C pins.
+
+---
+
+## Build gallery
+
+Photos of the reference build, from loose components to the finished, enclosed unit.
+Several shots show an **RF shield** fitted over the electronics — a hardware
+counterpart to the firmware's reduced BLE power that further isolates the GNSS
+receiver from radio noise (see
+[A note on BLE power and GNSS lock](#a-note-on-ble-power-and-gnss-lock)).
+
+<div align="center">
+  <img src="images/completed-emulator.jpeg" alt="The finished RaceBox Mini emulator" width="520"><br>
+  <sub>The completed emulator, decorated with the stickers that came with the GNSS module and an indicator of which end points forward (for Gyro/Accelerometer)</sub>
+</div>
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="images/components-and-box.jpeg" alt="Components laid out with the enclosure" width="340"><br>
+      <sub>&nbsp;Components and enclosure prior to assembly</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="images/GNSS-and-lid.jpeg" alt="GNSS module with mounting hole in the lid" width="340"><br>
+      <sub>&nbsp;GNSS module with mounting hole in the lid</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="images/components-wired.jpeg" alt="Components wired together" width="340"><br>
+      <sub>&nbsp;Components wired together, using header pins underneath the ESP32 board</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="images/assembled-without-shield.jpeg" alt="Assembly without the RF shield" width="340"><br>
+      <sub>Assembled, using hardening epoxy putty to firmly affix the components</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="images/shield-test-fit.jpeg" alt="RF shield test fit" width="340"><br>
+      <sub>RF shield test fit, not yet grounded or affixed</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="images/shield-grounded.jpeg" alt="RF shield grounded" width="340"><br>
+      <sub>RF shield grounded; I used two-sided tape to mount the shield</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="images/box-closed.jpeg" alt="Enclosure closed" width="340"><br>
+      <sub>Enclosure closed up, ready to test (before stickers!)</sub>
+    </td>
+    <td align="center" width="50%"></td>
+  </tr>
+</table>
 
 ---
 
@@ -150,6 +206,13 @@ BLE radio can desensitize the GNSS receiver. Dialing `BLE_TX_POWER` down to a lo
 level (the default is `ESP_PWR_LVL_N12`, the minimum) keeps the radio quiet —
 the phone is usually close by, so high power isn't needed — and can dramatically
 improve fix quality, including indoors.
+
+The **RF shield** shown in the [build gallery](#build-gallery) is the hardware
+counterpart to this: a grounded metal enclosure over the electronics that
+physically blocks radio noise from reaching the GNSS receiver. The two measures
+stack — lowering the BLE power quiets the source, while the shield blocks
+whatever remains. Either helps on its own; together they give the most reliable
+lock.
 
 ---
 
