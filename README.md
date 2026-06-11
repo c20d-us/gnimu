@@ -110,7 +110,7 @@ Photos of the reference build, from loose components to the finished, enclosed u
   <tr>
     <td align="center" width="50%">
       <img src="images/components-wired.jpeg" alt="Components wired together" width="340"><br>
-      <sub>Components wired together, using header pins<br>underneath the ESP32 board</sub><br>&nbsp;
+      <sub>Components wired together, using header pins<br>underneath the ESP32 board. Extra unused<br>pins were clipped off.</sub><br>&nbsp;
     </td>
     <td align="center" width="50%">
       <img src="images/assembled-without-shield.jpeg" alt="Assembly without the RF shield" width="340"><br>
