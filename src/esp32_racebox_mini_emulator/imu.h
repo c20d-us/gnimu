@@ -15,19 +15,17 @@ struct ImuProtocolUnits {
 };
 
 // Detect the MPU6050, set ranges/bandwidth, and seed the filters with a first
-// reading. Halts with a serial message if the chip isn't found. Call early in
-// setup().
+// reading. Halts with a serial message if the chip isn't found.
 void imuBegin();
 
 // Gyro-bias calibration — keep the device still during this. A no-op when
-// GYRO_CALIBRATION_ENABLED is not defined. Call late in setup(), after the
-// device has had time to settle.
+// GYRO_CALIBRATION_ENABLED is not defined.
 void imuCalibrate();
 
 // Read the MPU6050 at a fixed interval and update the smoothed accel/gyro
 // values. Self-throttles to ACCEL_SAMPLE_INTERVAL_MS, so it is safe to call
 // every loop().
-void updateImuFilters();
+void imuUpdate();
 
 // Convert the current filtered IMU values into RaceBox protocol units.
-ImuProtocolUnits readImuProtocolUnits();
+ImuProtocolUnits imuReadProtocolUnits();

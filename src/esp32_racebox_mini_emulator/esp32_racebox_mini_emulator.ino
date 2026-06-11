@@ -1,14 +1,8 @@
-// This is a private fork of the work done by Anchit Chandra Sekhar
-// Original source is at https://github.com/anchit92
-// Some changes have been made:
-//  - Fixed some bugs
-//  - Externalized settings to config.h
-//  - Added adjustability of BLE power levels
-//  - Added gyro calibration
-//  - Modularized the code into imu / gnss / ble / telemetry units
+// This code is an evolution of work done by Anchit Chandra Sekhart
+// https://github.com/anchit92/Open-Source-RaceBox-mini-Emulator
 //
-// Settings live in config.h. The hardware/protocol logic lives in the module
-// files (imu, gnss, ble, telemetry); this sketch is just orchestration.
+// Settings live in config.h
+// Hardware & protocol logic lives in the ble, gnss, imu, and telemetry modules
 #include "ble.h"
 #include "gnss.h"
 #include "imu.h"
@@ -16,21 +10,20 @@
 
 void setup() {
   Serial.begin(115200);
-  delay(500); // Allow USB serial to enumerate before sending any output
   Serial.println("🚀 RaceBox Mini Emulator starting up...");
 
-  imuBegin();
   gnssBegin();
-  imuCalibrate(); // Late, once the device has settled (see imu.cpp)
+  imuBegin();
+  imuCalibrate();
   bleBegin();
   telemetryBegin();
 }
 
 void loop() {
-  gnssCheck(); // Service the GNSS link — keeps data flowing
-  updateImuFilters();
-  updateLedStatus();
-  sendRaceBoxPacketIfReady();
-  reportStatus();
+  gnssCheck();
+  imuUpdate();
+  telemetryUpdateLed();
+  telemetrySendPacketIfReady();
+  telemetryReport();
   bleUpdate();
 }

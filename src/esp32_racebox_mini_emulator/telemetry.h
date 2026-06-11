@@ -14,11 +14,11 @@
 void telemetryBegin();
 
 // Drive the onboard LED: blink while disconnected, solid while connected.
-void updateLedStatus();
+void telemetryUpdateLed();
 
 // On each new GNSS epoch, count it and — when a client is connected — build and
 // send an 88-byte RaceBox Data Message over BLE.
-void sendRaceBoxPacketIfReady();
+void telemetrySendPacketIfReady();
 
 // Periodically print packet-rate and GNSS/IMU debug stats over serial.
-void reportStatus();
+void telemetryReport();

@@ -5,14 +5,14 @@
 static SFE_UBLOX_GNSS myGNSS;
 static HardwareSerial GPS_Serial(2);
 
-static void resetGpsBaudRate() {
+static void resetGnssBaudRate() {
   Serial.println("Attempting to set Correct Baud Rate");
-  GPS_Serial.begin(FACTORY_GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+  GPS_Serial.begin(FACTORY_GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
   delay(500);
 
   if (!myGNSS.begin(GPS_Serial)) {
     Serial.print("u-blox GNSS not detected at ");
-    Serial.print(FACTORY_GPS_BAUD);
+    Serial.print(FACTORY_GNSS_BAUD);
     Serial.println(" baud.");
     Serial.print("u-blox GNSS not detected, Check documentation for factory "
                  "baud rate and/or check your wiring");
@@ -20,28 +20,28 @@ static void resetGpsBaudRate() {
       delay(100);
   } else {
     Serial.print("GNSS detected at ");
-    Serial.print(FACTORY_GPS_BAUD);
+    Serial.print(FACTORY_GNSS_BAUD);
     Serial.println(" baud!");
   }
   delay(500);
 
   // Now switch baud rate
   Serial.print("Setting baud rate to ");
-  Serial.print(GPS_BAUD);
+  Serial.print(GNSS_BAUD);
   Serial.println("...");
-  myGNSS.setSerialRate(GPS_BAUD);
+  myGNSS.setSerialRate(GNSS_BAUD);
   Serial.print("Baud rate changed to ");
-  Serial.println(GPS_BAUD);
+  Serial.println(GNSS_BAUD);
 
   GPS_Serial.end();
   delay(100);
   // Re-initialize the serial port at the new baud rate
-  GPS_Serial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+  GPS_Serial.begin(GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
   delay(500);
 
   if (!myGNSS.begin(GPS_Serial)) {
     Serial.print("GNSS not detected at ");
-    Serial.print(GPS_BAUD);
+    Serial.print(GNSS_BAUD);
     Serial.println(" baud.");
     Serial.print("u-blox GNSS not detected, Check documentation for factory "
                  "baud rate and/or check your wiring");
@@ -49,29 +49,29 @@ static void resetGpsBaudRate() {
       delay(100);
   }
   Serial.print("GNSS detected at ");
-  Serial.print(GPS_BAUD);
+  Serial.print(GNSS_BAUD);
   Serial.println(" baud! Saving to Flash");
   myGNSS.saveConfiguration(); // Save to flash
   GPS_Serial.end();
 }
 
 void gnssBegin() {
-  GPS_Serial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+  GPS_Serial.begin(GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
   if (!myGNSS.begin(GPS_Serial)) {
     Serial.println("❌ GNSS not detected. Attempting to configure.");
     GPS_Serial.end();
-    resetGpsBaudRate();
-    GPS_Serial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+    resetGnssBaudRate();
+    GPS_Serial.begin(GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
   }
 
   // Set GNSS output to PVT only
   myGNSS.setAutoPVT(true);
-  myGNSS.setDynamicModel(GPS_DYNAMIC_MODEL);
+  myGNSS.setDynamicModel(GNSS_DYNAMIC_MODEL);
   // --- Configure GPS update rate to MAX_NAVIGATION_RATE Hz ---
   if (myGNSS.setNavigationFrequency(MAX_NAVIGATION_RATE)) {
-    Serial.printf("✅ GPS update rate set to %d Hz.\n", MAX_NAVIGATION_RATE);
+    Serial.printf("✅ GNSS update rate set to %d Hz.\n", MAX_NAVIGATION_RATE);
   } else {
-    Serial.println("❌ Failed to set GPS update rate.");
+    Serial.println("❌ Failed to set GNSS update rate.");
   }
 
 // --- GNSS Constellation Setup ---

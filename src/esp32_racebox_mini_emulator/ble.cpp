@@ -15,7 +15,7 @@ static volatile bool deviceConnected = false;
 static volatile bool oldDeviceConnected = false;
 
 // --- BLE Callbacks ---
-class MyServerCallbacks : public BLEServerCallbacks {
+class ServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer *pServer) {
     deviceConnected = true;
     // Request a larger MTU to fit an 88-byte packet + headers in one go
@@ -28,7 +28,7 @@ class MyServerCallbacks : public BLEServerCallbacks {
   }
 };
 
-class MyCharacteristicCallbacks : public BLECharacteristicCallbacks {
+class RxCharacteristicCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic *pCharacteristic) {
     String rxValue = pCharacteristic->getValue();
 
@@ -57,7 +57,7 @@ void bleBegin() {
     }
   }
   pServer = BLEDevice::createServer();
-  pServer->setCallbacks(new MyServerCallbacks());
+  pServer->setCallbacks(new ServerCallbacks());
 
   BLEService *pService = pServer->createService(RACEBOX_SERVICE_UUID);
   pCharacteristicTx = pService->createCharacteristic(
@@ -66,7 +66,7 @@ void bleBegin() {
   pCharacteristicRx = pService->createCharacteristic(
       RACEBOX_CHARACTERISTIC_RX_UUID,
       BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR);
-  pCharacteristicRx->setCallbacks(new MyCharacteristicCallbacks());
+  pCharacteristicRx->setCallbacks(new RxCharacteristicCallbacks());
   pService->start();
   // --- Device Information Service ---
   BLEService *pDeviceInfo =

@@ -7,17 +7,17 @@
 #include <string.h> // for memcpy
 
 // --- Packet timing / stats counters — private to this file ---
-static unsigned long lastGpsRateCheckTime = 0;
+static unsigned long lastReportMs = 0;
 static volatile unsigned int bleSentPacketCount = 0;
-static volatile unsigned int gnssUpdateCount = 0;
+static volatile unsigned int gnssEpochCount = 0;
 
 void telemetryBegin() {
   pinMode(ONBOARD_LED_PIN, OUTPUT);
-  lastGpsRateCheckTime = millis();
+  lastReportMs = millis();
 }
 
 // --- Blink the onboard LED when disconnected, solid when connected ---
-void updateLedStatus() {
+void telemetryUpdateLed() {
   if (!bleIsConnected()) {
     static unsigned long lastBlinkMs = 0;
     if (millis() - lastBlinkMs > LED_BLINK_INTERVAL_MS) {
@@ -31,8 +31,8 @@ void updateLedStatus() {
 
 // --- Assemble an 88-byte RaceBox Data Message from the latest GNSS + IMU data.
 // Fills packet[0..87] with the UBX header, 80-byte payload, and checksum. ---
-static void buildRaceBoxPacket(uint8_t *packet) {
-  ImuProtocolUnits imu = readImuProtocolUnits();
+static void buildPacket(uint8_t *packet) {
+  ImuProtocolUnits imu = imuReadProtocolUnits();
 
   uint8_t payload[80] = {0};
 
@@ -48,16 +48,16 @@ static void buildRaceBoxPacket(uint8_t *packet) {
   writeLittleEndian(payload, 10, pvt->sec);
 
   // Offset 11: Validity Flags (RaceBox Protocol)
-  uint8_t raceboxValidityFlags = 0;
+  uint8_t validityFlags = 0;
   if (pvt->valid.bits.validDate)
-    raceboxValidityFlags |= (1 << 0); // Bit 0: valid date
+    validityFlags |= (1 << 0); // Bit 0: valid date
   if (pvt->valid.bits.validTime)
-    raceboxValidityFlags |= (1 << 1); // Bit 1: valid time
+    validityFlags |= (1 << 1); // Bit 1: valid time
   if (pvt->valid.bits.fullyResolved)
-    raceboxValidityFlags |= (1 << 2); // Bit 2: fully resolved
+    validityFlags |= (1 << 2); // Bit 2: fully resolved
   if (pvt->valid.bits.validMag)
-    raceboxValidityFlags |= (1 << 3); // Bit 3: valid magnetic declination
-  writeLittleEndian(payload, 11, raceboxValidityFlags);
+    validityFlags |= (1 << 3); // Bit 3: valid magnetic declination
+  writeLittleEndian(payload, 11, validityFlags);
 
   // Offset 12: Time Accuracy (RaceBox Protocol)
   writeLittleEndian(payload, 12, pvt->tAcc);
@@ -73,29 +73,29 @@ static void buildRaceBoxPacket(uint8_t *packet) {
   writeLittleEndian(payload, 20, safeFixType);
 
   // Offset 21: Fix Status Flags (RaceBox Protocol)
-  uint8_t fixStatusFlagsRacebox = 0;
+  uint8_t fixStatusFlags = 0;
 
   if (pvt->fixType == 3) {
-    fixStatusFlagsRacebox |= (1 << 0); // Bit 0: valid fix
+    fixStatusFlags |= (1 << 0); // Bit 0: valid fix
   }
 
   if (gnssHeadingValid()) { // Use the confirmed function to check
                             // for valid heading
-    fixStatusFlagsRacebox |=
+    fixStatusFlags |=
         (1 << 5); // Bit 5: valid heading (as per RaceBox Protocol)
   }
-  writeLittleEndian(payload, 21, fixStatusFlagsRacebox);
+  writeLittleEndian(payload, 21, fixStatusFlags);
 
   // Offset 22: Date/Time Flags (RaceBox Protocol)
-  uint8_t raceboxDateTimeFlags = 0;
+  uint8_t dateTimeFlags = 0;
   if (pvt->valid.bits.validTime)
-    raceboxDateTimeFlags |=
+    dateTimeFlags |=
         (1 << 5); // Available confirmation of Date/Time Validity
   if (pvt->valid.bits.validDate)
-    raceboxDateTimeFlags |= (1 << 6); // Confirmed UTC Date Validity
+    dateTimeFlags |= (1 << 6); // Confirmed UTC Date Validity
   if (pvt->valid.bits.validTime && pvt->valid.bits.fullyResolved)
-    raceboxDateTimeFlags |= (1 << 7); // Confirmed UTC Time Validity
-  writeLittleEndian(payload, 22, raceboxDateTimeFlags);
+    dateTimeFlags |= (1 << 7); // Confirmed UTC Time Validity
+  writeLittleEndian(payload, 22, dateTimeFlags);
 
   // Offset 23: Number of SVs (RaceBox Protocol)
   writeLittleEndian(payload, 23, pvt->numSV);
@@ -150,29 +150,29 @@ static void buildRaceBoxPacket(uint8_t *packet) {
 }
 
 // --- On each new GNSS epoch, count it and (when connected) send a packet ---
-void sendRaceBoxPacketIfReady() {
+void telemetrySendPacketIfReady() {
   if (!gnssHasNewEpoch())
     return;
-  gnssUpdateCount++;
+  gnssEpochCount++;
 
   if (!bleIsConnected())
     return;
   bleSentPacketCount++;
 
   uint8_t packet[88] = {0};
-  buildRaceBoxPacket(packet);
+  buildPacket(packet);
 
   bleSendPacket(packet, 88);
 }
 
 // --- Periodically print packet rate and GNSS/IMU debug stats over serial ---
-void reportStatus() {
+void telemetryReport() {
   // Report packet send rate — runs regardless of GPS state
   const unsigned long now = millis();
-  if ((now - lastGpsRateCheckTime) >= GPS_RATE_REPORT_INTERVAL_MS) {
-    float elapsed = (now - lastGpsRateCheckTime) / 1000.0;
+  if ((now - lastReportMs) >= STATS_REPORT_INTERVAL_MS) {
+    float elapsed = (now - lastReportMs) / 1000.0;
     float bleRate = bleSentPacketCount / elapsed;
-    float gnssRate = gnssUpdateCount / elapsed;
+    float gnssRate = gnssEpochCount / elapsed;
     // Additional satellite info for debugging: number of satellites, fix type,
     // horizontal accuracy, and lat/lon
     uint8_t sats = 0;
@@ -188,14 +188,14 @@ void reportStatus() {
       lon = pvt->lon * 1e-7;
     }
     // Convert filtered IMU values to protocol units for display
-    ImuProtocolUnits imu = readImuProtocolUnits();
+    ImuProtocolUnits imu = imuReadProtocolUnits();
     Serial.printf("BLE Rate: %.2f Hz | GNSS Rate: %.2f Hz | SV: %u | Fix: %u | "
                   "HAcc: %u mm | Lat: %.7f Lon: %.7f | milliG: X=%d Y=%d Z=%d "
                   "| centiDeg/s: X=%d Y=%d Z=%d\n",
                   bleRate, gnssRate, sats, fix, hAcc, lat, lon, imu.gX, imu.gY,
                   imu.gZ, imu.rX, imu.rY, imu.rZ);
     bleSentPacketCount = 0;
-    gnssUpdateCount = 0;
-    lastGpsRateCheckTime = now;
+    gnssEpochCount = 0;
+    lastReportMs = now;
   }
 }

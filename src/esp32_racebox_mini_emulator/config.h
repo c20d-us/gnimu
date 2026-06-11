@@ -21,18 +21,18 @@
 // --- HARDWARE PINS ---
 // ============================================================================
 
-#define GPS_RX_PIN 16
-#define GPS_TX_PIN 17
+#define GNSS_RX_PIN 16
+#define GNSS_TX_PIN 17
 #define ONBOARD_LED_PIN 2
 
 // ============================================================================
 // --- GPS / GNSS SETTINGS ---
 // ============================================================================
 
-#define GPS_BAUD 115200
-#define FACTORY_GPS_BAUD 9600
+#define GNSS_BAUD 115200
+#define FACTORY_GNSS_BAUD 9600
 #define MAX_NAVIGATION_RATE 25 // Hz — max supported by RaceBox Mini protocol
-#define GPS_DYNAMIC_MODEL DYN_MODEL_AUTOMOTIVE
+#define GNSS_DYNAMIC_MODEL DYN_MODEL_AUTOMOTIVE
 
 // --- GNSS Constellation Toggles ---
 // Enable only the constellations your module supports and your region benefits
@@ -91,7 +91,7 @@
 // --- TIMING & REPORTING ---
 // ============================================================================
 
-#define GPS_RATE_REPORT_INTERVAL_MS 1000 // ms — serial stats reporting interval
+#define STATS_REPORT_INTERVAL_MS 1000 // ms — serial stats reporting interval
 
 // ============================================================================
 // --- PROTOCOL CONSTANTS ---

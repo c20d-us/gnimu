@@ -4,9 +4,9 @@
 [![Platform: ESP32](https://img.shields.io/badge/platform-ESP32-000000.svg)](https://www.espressif.com/en/products/socs/esp32)
 [![Language: C++ (Arduino)](https://img.shields.io/badge/language-C%2B%2B%20(Arduino)-00599C.svg)](https://www.arduino.cc/)
 
-Turns an ESP32 development board, a GNSS module, and an MPU6050 accelerometer into a device that looks and behaves like a **[RaceBox Mini](https://www.racebox.pro/)** GPS performance meter. The official RaceBox app and other RaceBox-compatible tools can connect to it over Bluetooth Low Energy (BLE) and read live position, speed, and motion data.
+Turn an ESP32 development board, a GNSS module, and an MPU6050 IMU module into a device that looks and behaves like a **[RaceBox Mini](https://www.racebox.pro/)** GPS performance meter. The official RaceBox app and other RaceBox-compatible tools can connect to it over Bluetooth Low Energy (BLE) and read live position, speed, and motion data.
 
-This is a low-cost, hackable platform for experimenting with GNSS data logging, the RaceBox BLE protocol, and sensor fusion built from off-the-shelf parts.
+This is a low-cost, hackable platform for experimenting with GNSS and IMU data logging, the RaceBox BLE protocol, and sensor fusion built from off-the-shelf parts.
 
 I originally started this project as an emulator built for use with the [AutoX Data Logger for iOS](https://autoxdrivermod.com) app.
 
@@ -18,10 +18,10 @@ I originally started this project as an emulator built for use with the [AutoX D
 ## What it does
 
 - Reads a live [**GNSS fix**](https://en.wikipedia.org/wiki/Satellite_navigation) (position, altitude, speed, heading, accuracy, fix status, satellite count) from a u-blox GNSS receiver at up to **25 Hz**.
-- Reads **acceleration and rotation** from an MPU6050 6-axis [IMU](https://en.wikipedia.org/wiki/Inertial_measurement_unit), with smoothing and optional gyro-bias calibration at startup.
+- Reads **acceleration and rotation** from an MPU6050 6-axis [**IMU**](https://en.wikipedia.org/wiki/Inertial_measurement_unit), with smoothing and optional gyro-bias calibration at startup.
 - Packs everything into a **RaceBox Data Message** (a u-blox UBX-framed binary packet) and streams it over **BLE** to any RaceBox-compatible client.
 - Advertises a BLE **Device Information Service** (model, serial, firmware, hardware, manufacturer) so official apps recognize and pair with it.
-- Prints a human-readable **serial status line** at 1Hz for debugging: packet rate, satellite count, fix type, horizontal accuracy, position, and IMU values.
+- Prints a human-readable **serial status line** at 1Hz for debugging: packet rate, GNSS data rate, satellite count, fix type, horizontal accuracy, position, and IMU values.
 
 ```mermaid
 flowchart LR
@@ -48,7 +48,7 @@ flowchart LR
     <td>A u-blox <a href="https://www.u-blox.com/en/product/max-m10-series"><strong>M10</strong>-class</a> receiver. Reference unit: HGLRC M100-5883 (datasheet in <a href="Documentation/"><code>Documentation/</code></a>). Other u-blox modules supported by the SparkFun library should work.</td>
   </tr>
   <tr>
-    <td><a href="https://www.amazon.com/dp/B01DK83ZYQ"><strong>MPU6050</strong></a></td>
+    <td><a href="https://www.amazon.com/dp/B01DK83ZYQ"><strong>IMU</strong></a></td>
     <td>I²C 6-axis accelerometer + gyroscope breakout. Reference unit: HiLetgo GY-521 MPU-6050 (datasheet in <a href="Documentation/"><code>Documentation/</code></a>).</td>
   </tr>
   <tr>
@@ -175,8 +175,8 @@ All user-tunable settings live in [`config.h`](src/esp32_racebox_mini_emulator/c
 |---------|---------|
 | `DEVICE_ID` | 10-digit device serial as a **quoted string** (e.g. `"3608675309"`). Validated at compile time: exactly 10 digits, first digit `0`–`3`. |
 | `MODEL`, `FIRMWARE_VERSION`, `HARDWARE_VERSION`, `MANUFACTURER` | Values reported via the BLE Device Information Service. |
-| `GPS_RX_PIN`, `GPS_TX_PIN`, `ONBOARD_LED_PIN` | Hardware pin assignments. |
-| `GPS_BAUD`, `FACTORY_GPS_BAUD` | Serial baud rates. On first boot the firmware can detect a module at its factory baud, switch it to `GPS_BAUD`, and save the config to flash. |
+| `GNSS_RX_PIN`, `GNSS_TX_PIN`, `ONBOARD_LED_PIN` | Hardware pin assignments. |
+| `GNSS_BAUD`, `FACTORY_GNSS_BAUD` | Serial baud rates. On first boot the firmware can detect a module at its factory baud, switch it to `GNSS_BAUD`, and save the config to flash. |
 | `MAX_NAVIGATION_RATE` | GNSS update rate in Hz (1–25). |
 | `ENABLE_GNSS_*` | Per-constellation toggles (GPS, Galileo, GLONASS, BeiDou, QZSS, SBAS). Enable only what your module/region supports. |
 | `GYRO_CALIBRATION_ENABLED`, `GYRO_CALIBRATION_SAMPLES` | Startup gyro-bias calibration — keep the device still during the first second of boot. |
@@ -207,7 +207,7 @@ The **RF shield** shown in the [build gallery](#build-gallery) is the hardware c
 | Symptom | Things to check |
 |---------|-----------------|
 | `Failed to find MPU6050 chip` | I²C wiring (SDA/SCL), 3V3 power, board address. |
-| `GNSS not detected` | UART wiring (note TX↔RX crossover), `GPS_BAUD` / `FACTORY_GPS_BAUD`, module power. The sketch will attempt to auto-configure the baud rate. |
+| `GNSS not detected` | UART wiring (note TX↔RX crossover), `GNSS_BAUD` / `FACTORY_GNSS_BAUD`, module power. The sketch will attempt to auto-configure the baud rate. |
 | Few or no satellites | Move outdoors / near a window; lower `BLE_TX_POWER`; give it a cold-start minute. |
 | App won't connect | Confirm `DEVICE_ID` is valid (10 digits, first digit 0–3); make sure no other client is already connected. |
 | Build fails with a `static_assert` message | Read the message — it names the offending `config.h` value and the allowed range. |
