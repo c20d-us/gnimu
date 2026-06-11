@@ -4,37 +4,25 @@
 [![Platform: ESP32](https://img.shields.io/badge/platform-ESP32-000000.svg)](https://www.espressif.com/en/products/socs/esp32)
 [![Language: C++ (Arduino)](https://img.shields.io/badge/language-C%2B%2B%20(Arduino)-00599C.svg)](https://www.arduino.cc/)
 
-Turns an ESP32, a GNSS module, and an MPU6050 into a device that looks and behaves
-like a **[RaceBox Mini](https://www.racebox.pro/)** GPS performance meter. The
-official RaceBox app and other RaceBox-compatible tools can connect to it over
-Bluetooth Low Energy (BLE) and read live position, speed, and motion data.
+Turns an ESP32 development board, a GNSS module, and an MPU6050 accelerometer into a device that looks and behaves like a **[RaceBox Mini](https://www.racebox.pro/)** GPS performance meter. The official RaceBox app and other RaceBox-compatible tools can connect to it over Bluetooth Low Energy (BLE) and read live position, speed, and motion data.
 
-This is a low-cost, hackable platform for experimenting with GNSS data logging,
-the RaceBox BLE protocol, and sensor fusion built from off-the-shelf parts.
+This is a low-cost, hackable platform for experimenting with GNSS data logging, the RaceBox BLE protocol, and sensor fusion built from off-the-shelf parts.
 
 I originally started this project as an emulator built for use with the [AutoX Data Logger for iOS](https://autoxdrivermod.com) app.
 
 > [!IMPORTANT]
-> **Unofficial project.** This is an independent, educational implementation. It is
-> **not affiliated with, endorsed by, or supported by RaceBox.** "RaceBox" and
-> related marks belong to their respective owner. Use it for learning and personal
-> experimentation, at your own risk. Do not use it to impersonate a genuine device
-> for any commercial or fraudulent purpose.
+> **Unofficial project**
+> This is an independent, educational, and non-commercial implementation. It is **not affiliated with, endorsed by, or supported by RaceBox.** "RaceBox" and related marks belong to their respective owner. Use this code for learning and personal experimentation at your own risk. Do not use this code to impersonate a genuine device for any commercial or fraudulent purpose.
 
 ---
 
 ## What it does
 
-- Reads a live **GNSS fix** (position, altitude, speed, heading, accuracy, fix
-  status, satellite count) from a u-blox GNSS receiver at up to **25 Hz**.
-- Reads **acceleration and rotation** from an MPU6050 6-axis IMU, with smoothing
-  and optional gyro-bias calibration at startup.
-- Packs everything into the **RaceBox Data Message** (a u-blox UBX-framed binary
-  packet) and streams it over **BLE** to any RaceBox-compatible client.
-- Advertises a BLE **Device Information Service** (model, serial, firmware,
-  hardware, manufacturer) so official apps recognize and pair with it.
-- Prints a human-readable **serial status line** (1 Hz) for debugging: packet
-  rate, satellite count, fix type, horizontal accuracy, position, and IMU values.
+- Reads a live **GNSS fix** (position, altitude, speed, heading, accuracy, fix status, satellite count) from a u-blox GNSS receiver at up to **25 Hz**.
+- Reads **acceleration and rotation** from an MPU6050 6-axis IMU, with smoothing and optional gyro-bias calibration at startup.
+- Packs everything into a **RaceBox Data Message** (a u-blox UBX-framed binary packet) and streams it over **BLE** to any RaceBox-compatible client.
+- Advertises a BLE **Device Information Service** (model, serial, firmware, hardware, manufacturer) so official apps recognize and pair with it.
+- Prints a human-readable **serial status line** at 1Hz for debugging: packet rate, satellite count, fix type, horizontal accuracy, position, and IMU values.
 
 ```mermaid
 flowchart LR
@@ -54,7 +42,7 @@ flowchart LR
   </tr>
   <tr>
     <td><a href="https://www.amazon.com/dp/B0DF2YJSHN"><strong>ESP32 dev board</strong></a></td>
-    <td>Developed on an ESP32-WROOM DevKit V1 (30-pin). See <a href="Documentation/"><code>Documentation/</code></a> for the pinout.</td>
+    <td>Developed on an AITRIP ESP32-WROOM-32 Development Board. See <a href="Documentation/"><code>Documentation/</code></a> for the pinout.</td>
   </tr>
   <tr>
     <td><a href="https://www.amazon.com/dp/B0CB5N8RQ8"><strong>u-blox GNSS module</strong></a></td>
@@ -66,11 +54,11 @@ flowchart LR
   </tr>
   <tr>
     <td><a href="https://www.amazon.com/dp/B0BQYPKRQS"><strong>Project Box</strong></a></td>
-    <td>ABS Plastic Project Case, White, 3.15 x 1.97 x 1.02 inch (80 x 50 x 26 mm). You need to cut holes into this box to fit your specific board and component layout (see images below).</td>
+    <td>ABS Plastic Project Case, White, 3.15 x 1.97 x 1.02 inch (80 x 50 x 26 mm). You'll need to cut holes into this box to fit your specific board and component layout (see images below).</td>
   </tr>
   <tr>
     <td><a href="https://www.amazon.com/dp/B0FPMC9917"><strong>Nylon M2.5 hex standoffs</strong></a></td>
-    <td>Nylon hex standoffs, washers, nuts, screws, to help with orienting the components within the project box.</td>
+    <td>Nylon hex standoffs, washers, nuts, screws, to help with positioning the components within the project box.</td>
   </tr>
 </table>
 
@@ -94,22 +82,15 @@ flowchart LR
 | VCC         | VIN (5V pin) |
 | GND         | GND |
 
-**Status LED:** the onboard LED (GPIO2) blinks while waiting for a BLE connection
-and stays solid once a client is connected.
+**Status LED:** the onboard LED (GPIO2) blinks while waiting for a BLE connection and stays solid once a client is connected.
 
-> Pin assignments for the GNSS UART and the LED are configurable in
-> [`config.h`](src/esp32_racebox_mini_emulator/config.h). The MPU6050 uses the
-> ESP32's default I²C pins.
+> Pin assignments for the GNSS UART and the LED are configurable in [`config.h`](src/esp32_racebox_mini_emulator/config.h). The MPU6050 uses the ESP32's default I²C pins.
 
 ---
 
 ## Build gallery
 
-Photos of the reference build, from loose components to the finished, enclosed unit.
-Several shots show an **RF shield** fitted over the electronics — a hardware
-counterpart to the firmware's reduced BLE power that further isolates the GNSS
-receiver from radio noise (see
-[A note on BLE power and GNSS lock](#a-note-on-ble-power-and-gnss-lock)).
+Photos of the reference build, from loose components to the finished, enclosed unit. Several shots show an **RF shield** fitted over the electronics — a hardware counterpart to the firmware's reduced BLE power that further isolates the GNSS receiver from radio noise (see [A note on BLE power and GNSS lock](#a-note-on-ble-power-and-gnss-lock)).
 
 <div align="center">
   <img src="images/completed-emulator.jpeg" alt="The finished RaceBox Mini emulator" width="520"><br>
@@ -160,10 +141,8 @@ receiver from radio noise (see
 
 ## Software & dependencies
 
-- **[Arduino IDE](https://www.arduino.cc/en/software)** (2.x recommended) or
-  **[arduino-cli](https://arduino.github.io/arduino-cli/)**.
-- **ESP32 board support** — install the `esp32` package by Espressif via the
-  Boards Manager.
+- **[Arduino IDE](https://www.arduino.cc/en/software)** (2.x recommended).
+- **ESP32 board support** — install the `esp32` package by Espressif via the Boards Manager.
 - Libraries (install via Library Manager):
   - **Adafruit MPU6050** (pulls in Adafruit Unified Sensor + Adafruit BusIO)
   - **SparkFun u-blox GNSS Arduino Library**
@@ -182,25 +161,12 @@ receiver from radio noise (see
 5. Click **Upload**.
 6. Open the **Serial Monitor** at **115200 baud** to watch the startup and status output.
 
-### arduino-cli
-
-```bash
-# one-time setup
-arduino-cli core install esp32:esp32
-arduino-cli lib install "Adafruit MPU6050" "SparkFun u-blox GNSS Arduino Library"
-
-# from the repo root — compile and upload (adjust the port)
-arduino-cli compile --fqbn esp32:esp32:esp32 src/esp32_racebox_mini_emulator
-arduino-cli upload  --fqbn esp32:esp32:esp32 -p /dev/ttyUSB0 src/esp32_racebox_mini_emulator
-```
-
+> **Note**: If you are building on an Apple Silicon Mac, you can use the AS_native Arduino IDE but you **must** have Rosetta installed in order to correctly compile the ESP32 binary. Without Rosetta installed you will get a compilation error.
 ---
 
 ## Configuration
 
-All user-tunable settings live in
-[`config.h`](src/esp32_racebox_mini_emulator/config.h), grouped into sections.
-Highlights:
+All user-tunable settings live in [`config.h`](src/esp32_racebox_mini_emulator/config.h), grouped into sections. Highlights:
 
 | Setting | Purpose |
 |---------|---------|
@@ -214,33 +180,20 @@ Highlights:
 | `ACCEL_ALPHA`, `GYRO_ALPHA` | IMU smoothing (exponential moving average) strength. |
 | `BLE_TX_POWER` | BLE transmit power. **Lowering this reduces RF interference with the GNSS front end and can noticeably improve satellite lock** — see notes below. |
 
-Several values are checked with `static_assert` at compile time, so an invalid
-configuration fails the build with a clear message instead of misbehaving on the
-device.
+Several values are checked with `static_assert` at compile time, so an invalid configuration fails the build with a clear message instead of misbehaving on the device.
 
 ### A note on BLE power and GNSS lock
 
-GNSS reception is sensitive to nearby RF noise. On compact builds, the ESP32's
-BLE radio can desensitize the GNSS receiver. Dialing `BLE_TX_POWER` down to a low
-level (the default is `ESP_PWR_LVL_N12`, the minimum) keeps the radio quiet —
-the phone is usually close by, so high power isn't needed — and can dramatically
-improve fix quality, including indoors.
+GNSS reception is sensitive to nearby RF noise. On compact builds, the ESP32's BLE radio can desensitize the GNSS receiver. Dialing `BLE_TX_POWER` down to a low level (the default is `ESP_PWR_LVL_N12`, the minimum) keeps the radio quiet — the receiver is usually close by, so high power isn't needed — and can dramatically improve fix quality, including indoors.
 
-The **RF shield** shown in the [build gallery](#build-gallery) is the hardware
-counterpart to this: a grounded metal enclosure over the electronics that
-physically blocks radio noise from reaching the GNSS receiver. The two measures
-stack — lowering the BLE power quiets the source, while the shield blocks
-whatever remains. Either helps on its own; together they give the most reliable
-lock.
+The **RF shield** shown in the [build gallery](#build-gallery) is the hardware counterpart to this: a grounded metal enclosure over the GNSS module that physically blocks radio noise from reaching the GNSS receiver. The two measures stack — lowering the BLE power quiets the source, while the shield blocks whatever remains. Either helps on its own; together they give the most reliable lock.
 
 ---
 
 ## Usage
 
-1. Power the assembled device and give the GNSS module time to acquire a fix
-   (faster outdoors / near a window). The onboard LED blinks while unconnected.
-2. In the **RaceBox app** (or another RaceBox-compatible client), scan for and
-   connect to the device — it advertises using the `MODEL` + `DEVICE_ID` name.
+1. Power the assembled device and give the GNSS module time to acquire a fix (faster outdoors / near a window). The onboard LED blinks while unconnected.
+2. In the **RaceBox app** (or another RaceBox-compatible client), scan for and connect to the device — it advertises using the `MODEL` + `DEVICE_ID` name.
 3. On connect, the LED goes solid and the device begins streaming data packets.
 4. Optional: keep a serial monitor open at 115200 baud to watch live diagnostics.
 
@@ -260,14 +213,9 @@ lock.
 
 ## Credits
 
-This project is a fork and continuation of earlier work by
-**Anchit Chandra Sekhar** ([github.com/anchit92](https://github.com/anchit92)).
-Changes in this fork include bug fixes, externalized configuration, a BLE
-transmit-power control, startup gyro calibration, and an ongoing modularization
-of the codebase.
+This project is a fork and continuation of earlier work by **Anchit Chandra Sekhar** ([github.com/anchit92](https://github.com/anchit92)). Changes in this fork include bug fixes, externalized configuration, a BLE transmit-power control, startup gyro calibration, and an ongoing modularization of the codebase.
 
-Protocol details follow the *RaceBox BLE Protocol Description* (rev 8), included
-in [`Documentation/`](Documentation/).
+Protocol details follow the *RaceBox BLE Protocol Description* (rev 8), included in [`Documentation/`](Documentation/).
 
 ---
 
