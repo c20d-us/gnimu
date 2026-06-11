@@ -98,41 +98,41 @@ Photos of the reference build, from loose components to the finished, enclosed u
 
 <table>
   <tr>
-    <td align="center" width="50%">
+    <td align="center" valign="top" width="50%">
       <img src="images/components-and-box.jpeg" alt="Components laid out with the enclosure" width="340"><br>
       <sub>Components and enclosure prior to assembly</sub><br>&nbsp;
     </td>
-    <td align="center" width="50%">
+    <td align="center" valign="top" width="50%">
       <img src="images/GNSS-and-lid.jpeg" alt="GNSS module with mounting hole in the lid" width="340"><br>
       <sub>GNSS module with mounting hole in the lid</sub><br>&nbsp;
     </td>
   </tr>
   <tr>
-    <td align="center" width="50%">
+    <td align="center" valign="top" width="50%">
       <img src="images/components-wired.jpeg" alt="Components wired together" width="340"><br>
       <sub>Components wired together, using header pins<br>underneath the ESP32 board. Extra unused<br>pins were clipped off.</sub><br>&nbsp;
     </td>
-    <td align="center" width="50%">
+    <td align="center" valign="top" width="50%">
       <img src="images/assembled-without-shield.jpeg" alt="Assembly without the RF shield" width="340"><br>
       <sub>Assembled, using hardening epoxy putty<br>to firmly affix the components</sub>
     </td>
   </tr>
   <tr>
-    <td align="center" width="50%">
+    <td align="center" valign="top" width="50%">
       <img src="images/shield-test-fit.jpeg" alt="RF shield test fit" width="340"><br>
       <sub>RF shield test fit, not yet grounded or affixed</sub><br>&nbsp;
     </td>
-    <td align="center" width="50%">
+    <td align="center" valign="top" width="50%">
       <img src="images/shield-grounded.jpeg" alt="RF shield grounded" width="340"><br>
       <sub>RF shield grounded; I used two-sided tape to mount the shield</sub><br>&nbsp;
     </td>
   </tr>
   <tr>
-    <td align="center" width="50%">
+    <td align="center" valign="top" width="50%">
       <img src="images/box-closed.jpeg" alt="Enclosure closed" width="340"><br>
       <sub>Enclosure closed up, ready to test (before stickers!)</sub><br>&nbsp;
     </td>
-    <td align="center" width="50%"></td>
+    <td align="center" valign="top" width="50%"></td>
   </tr>
 </table>
 
