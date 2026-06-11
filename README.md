@@ -11,15 +11,14 @@ This is a low-cost, hackable platform for experimenting with GNSS data logging, 
 I originally started this project as an emulator built for use with the [AutoX Data Logger for iOS](https://autoxdrivermod.com) app.
 
 > [!IMPORTANT]
-> **Unofficial project**
-> This is an independent, educational, and non-commercial implementation. It is **not affiliated with, endorsed by, or supported by RaceBox.** "RaceBox" and related marks belong to their respective owner. Use this code for learning and personal experimentation at your own risk. Do not use this code to impersonate a genuine device for any commercial or fraudulent purpose.
+> **Unofficial project.** This is an independent, educational, and non-commercial implementation. It is **not affiliated with, endorsed by, or supported by RaceBox.** "RaceBox" and related marks belong to their respective owner. Use this code for learning and personal experimentation only, and at your own risk. Do not use this code to impersonate a genuine device for any commercial or fraudulent purpose.
 
 ---
 
 ## What it does
 
-- Reads a live **GNSS fix** (position, altitude, speed, heading, accuracy, fix status, satellite count) from a u-blox GNSS receiver at up to **25 Hz**.
-- Reads **acceleration and rotation** from an MPU6050 6-axis IMU, with smoothing and optional gyro-bias calibration at startup.
+- Reads a live [**GNSS fix**](https://en.wikipedia.org/wiki/Satellite_navigation) (position, altitude, speed, heading, accuracy, fix status, satellite count) from a u-blox GNSS receiver at up to **25 Hz**.
+- Reads **acceleration and rotation** from an MPU6050 6-axis [IMU](https://en.wikipedia.org/wiki/Inertial_measurement_unit), with smoothing and optional gyro-bias calibration at startup.
 - Packs everything into a **RaceBox Data Message** (a u-blox UBX-framed binary packet) and streams it over **BLE** to any RaceBox-compatible client.
 - Advertises a BLE **Device Information Service** (model, serial, firmware, hardware, manufacturer) so official apps recognize and pair with it.
 - Prints a human-readable **serial status line** at 1Hz for debugging: packet rate, satellite count, fix type, horizontal accuracy, position, and IMU values.
@@ -46,7 +45,7 @@ flowchart LR
   </tr>
   <tr>
     <td><a href="https://www.amazon.com/dp/B0CB5N8RQ8"><strong>u-blox GNSS module</strong></a></td>
-    <td>A u-blox <strong>M10</strong>-class receiver. Reference unit: HGLRC M100-5883 (datasheet in <a href="Documentation/"><code>Documentation/</code></a>). Other u-blox modules supported by the SparkFun library should work.</td>
+    <td>A u-blox <a href="https://www.u-blox.com/en/product/max-m10-series"><strong>M10</strong>-class></a> receiver. Reference unit: HGLRC M100-5883 (datasheet in <a href="Documentation/"><code>Documentation/</code></a>). Other u-blox modules supported by the SparkFun library should work.</td>
   </tr>
   <tr>
     <td><a href="https://www.amazon.com/dp/B01DK83ZYQ"><strong>MPU6050</strong></a></td>
