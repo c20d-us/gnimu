@@ -100,21 +100,21 @@ Photos of the reference build, from loose components to the finished, enclosed u
   <tr>
     <td align="center" width="50%">
       <img src="images/components-and-box.jpeg" alt="Components laid out with the enclosure" width="340"><br>
-      <sub>&nbsp;Components and enclosure prior to assembly</sub><br>&nbsp;
+      <sub>Components and enclosure prior to assembly</sub><br>&nbsp;
     </td>
     <td align="center" width="50%">
       <img src="images/GNSS-and-lid.jpeg" alt="GNSS module with mounting hole in the lid" width="340"><br>
-      <sub>&nbsp;GNSS module with mounting hole in the lid</sub><br>&nbsp;
+      <sub>GNSS module with mounting hole in the lid</sub><br>&nbsp;
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
       <img src="images/components-wired.jpeg" alt="Components wired together" width="340"><br>
-      <sub>&nbsp;Components wired together, using header pins underneath the ESP32 board</sub><br>&nbsp;
+      <sub>Components wired together, using header pins<br>underneath the ESP32 board</sub><br>&nbsp;
     </td>
     <td align="center" width="50%">
       <img src="images/assembled-without-shield.jpeg" alt="Assembly without the RF shield" width="340"><br>
-      <sub>Assembled, using hardening epoxy putty to firmly affix the components</sub><br>&nbsp;
+      <sub>Assembled, using hardening epoxy putty<br>to firmly affix the components</sub><br>&nbsp;
     </td>
   </tr>
   <tr>
