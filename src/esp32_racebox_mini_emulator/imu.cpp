@@ -3,20 +3,20 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 
-// --- IMU state — private to this file (file-scope `static`) ---
+// --- IMU state - private to this file (file-scope `static`) ---
 static Adafruit_MPU6050 myIMU;
 
 // Storage for the filtered values
 static float filteredAx = 0, filteredAy = 0, filteredAz = 0;
 static float filteredGx = 0, filteredGy = 0, filteredGz = 0;
 
-// Gyro bias offsets — measured at startup, subtracted from every reading.
+// Gyro bias offsets - measured at startup, subtracted from every reading.
 // Initialized to 0.0 so they are safe no-ops when calibration is disabled.
 static float gyroBiasX = 0.0f, gyroBiasY = 0.0f, gyroBiasZ = 0.0f;
 
 #ifdef GYRO_CALIBRATION_ENABLED
 static void calibrateGyro() {
-  Serial.println("⏳ Gyro calibration starting — keep device still...");
+  Serial.println("⏳ Gyro calibration starting - keep device still...");
   double sumX = 0, sumY = 0, sumZ = 0;
   sensors_event_t a, g, temp;
   for (int i = 0; i < GYRO_CALIBRATION_SAMPLES; i++) {
@@ -41,7 +41,7 @@ void imuBegin() {
     while (1)
       delay(100);
   } else {
-    Serial.println("✅ IMU Acceleromter/Gyro enabled.");
+    Serial.println("✅ IMU Accelerometer/Gyro enabled.");
   }
   myIMU.setAccelerometerRange(ACCEL_RANGE);
   myIMU.setGyroRange(GYRO_RANGE);
@@ -53,19 +53,16 @@ void imuBegin() {
   filteredAx = a.acceleration.x;
   filteredAy = a.acceleration.y;
   filteredAz = a.acceleration.z;
-}
 
-void imuCalibrate() {
 #ifdef GYRO_CALIBRATION_ENABLED
-  // Do this late in setup() so that the device has time to be settled prior.
-  // Doing it sooner might catch small movements from being plugged in.
-  // To be safe, throw in an extra half-second of wait time for settling.
+  // Calibrate gyro bias, ideally once the device has settled.
+  // Add a small extra margin to be safe.
   delay(500);
   calibrateGyro();
 #endif // GYRO_CALIBRATION_ENABLED
 }
 
-void imuUpdate() {
+void imuPoll() {
   static unsigned long lastAccelReadMs = 0;
   // Update Accelerometer readings at fixed interval
   if (millis() - lastAccelReadMs >= ACCEL_SAMPLE_INTERVAL_MS) {
@@ -90,15 +87,29 @@ void imuUpdate() {
   }
 }
 
+// Convert a scaled sensor value (gyro in centi-deg/sec, accel in milli-g) to
+// the protocol's int16_t, saturating at the representable ±32767 limit rather
+// than overflowing. A wrapped overflow would flip sign - reporting a hard left
+// spin as a right one - so we clamp to the extreme. The gyro can exceed range
+// at ±500 °/s; the accelerometer stays well within it even at the max ±g but
+// goes through here too so all six fields follow one consistent, safe pattern.
+static int16_t toProtocolInt16(double value) {
+  if (value > 32767.0)
+    return 32767;
+  if (value < -32768.0)
+    return -32768;
+  return (int16_t)value;
+}
+
 ImuProtocolUnits imuReadProtocolUnits() {
   ImuProtocolUnits u;
   // Convert accelerometer to milli-g (1g = 9.80665 m/s^2)
-  u.gX = filteredAx * 1000.0 / 9.80665;
-  u.gY = filteredAy * 1000.0 / 9.80665;
-  u.gZ = filteredAz * 1000.0 / 9.80665;
+  u.gX = toProtocolInt16(filteredAx * 1000.0 / 9.80665);
+  u.gY = toProtocolInt16(filteredAy * 1000.0 / 9.80665);
+  u.gZ = toProtocolInt16(filteredAz * 1000.0 / 9.80665);
   // Convert gyro to centi-deg/sec
-  u.rX = filteredGx * 180.0 / M_PI * 100.0;
-  u.rY = filteredGy * 180.0 / M_PI * 100.0;
-  u.rZ = filteredGz * 180.0 / M_PI * 100.0;
+  u.rX = toProtocolInt16(filteredGx * 180.0 / M_PI * 100.0);
+  u.rY = toProtocolInt16(filteredGy * 180.0 / M_PI * 100.0);
+  u.rZ = toProtocolInt16(filteredGz * 180.0 / M_PI * 100.0);
   return u;
 }

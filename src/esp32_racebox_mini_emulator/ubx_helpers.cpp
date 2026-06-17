@@ -1,7 +1,7 @@
 #include "ubx_helpers.h"
 
 // The byte writes below are explicit (least-significant byte first) rather than
-// a memcpy of the raw value, so the output is little-endian on ANY host CPU —
+// a memcpy of the raw value, so the output is little-endian on ANY host CPU -
 // the function keeps its promise regardless of the machine's native byte order.
 // The signed overloads reinterpret the value as their unsigned twin (a
 // well-defined 2's-complement bit copy) and reuse the same byte logic, which

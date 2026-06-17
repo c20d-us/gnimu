@@ -1,23 +1,29 @@
 #include "gnss.h"
 #include "config.h"
 
-// --- GNSS state — private to this file ---
+// --- GNSS state - private to this file ---
 static SFE_UBLOX_GNSS myGNSS;
-static HardwareSerial GPS_Serial(2);
+static HardwareSerial gnssSerial(2);
+
+// Report a detection failure at the given baud rate and halt forever - the
+// device cannot function without the GNSS module.
+static void haltGnssNotDetected(uint32_t baud) {
+  Serial.print("u-blox GNSS not detected at ");
+  Serial.print(baud);
+  Serial.println(" baud.");
+  Serial.println("Check documentation for the factory baud rate and/or check "
+                 "your wiring.");
+  while (1)
+    delay(100);
+}
 
 static void resetGnssBaudRate() {
   Serial.println("Attempting to set Correct Baud Rate");
-  GPS_Serial.begin(FACTORY_GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
+  gnssSerial.begin(FACTORY_GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
   delay(500);
 
-  if (!myGNSS.begin(GPS_Serial)) {
-    Serial.print("u-blox GNSS not detected at ");
-    Serial.print(FACTORY_GNSS_BAUD);
-    Serial.println(" baud.");
-    Serial.print("u-blox GNSS not detected, Check documentation for factory "
-                 "baud rate and/or check your wiring");
-    while (1)
-      delay(100);
+  if (!myGNSS.begin(gnssSerial)) {
+    haltGnssNotDetected(FACTORY_GNSS_BAUD);
   } else {
     Serial.print("GNSS detected at ");
     Serial.print(FACTORY_GNSS_BAUD);
@@ -33,35 +39,29 @@ static void resetGnssBaudRate() {
   Serial.print("Baud rate changed to ");
   Serial.println(GNSS_BAUD);
 
-  GPS_Serial.end();
+  gnssSerial.end();
   delay(100);
   // Re-initialize the serial port at the new baud rate
-  GPS_Serial.begin(GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
+  gnssSerial.begin(GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
   delay(500);
 
-  if (!myGNSS.begin(GPS_Serial)) {
-    Serial.print("GNSS not detected at ");
-    Serial.print(GNSS_BAUD);
-    Serial.println(" baud.");
-    Serial.print("u-blox GNSS not detected, Check documentation for factory "
-                 "baud rate and/or check your wiring");
-    while (1)
-      delay(100);
+  if (!myGNSS.begin(gnssSerial)) {
+    haltGnssNotDetected(GNSS_BAUD);
   }
   Serial.print("GNSS detected at ");
   Serial.print(GNSS_BAUD);
   Serial.println(" baud! Saving to Flash");
   myGNSS.saveConfiguration(); // Save to flash
-  GPS_Serial.end();
+  gnssSerial.end();
 }
 
 void gnssBegin() {
-  GPS_Serial.begin(GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
-  if (!myGNSS.begin(GPS_Serial)) {
+  gnssSerial.begin(GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
+  if (!myGNSS.begin(gnssSerial)) {
     Serial.println("❌ GNSS not detected. Attempting to configure.");
-    GPS_Serial.end();
+    gnssSerial.end();
     resetGnssBaudRate();
-    GPS_Serial.begin(GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
+    gnssSerial.begin(GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
   }
 
   // Set GNSS output to PVT only
@@ -149,7 +149,7 @@ void gnssBegin() {
 #endif
 }
 
-void gnssCheck() { myGNSS.checkUblox(); }
+void gnssPoll() { myGNSS.checkUblox(); }
 
 bool gnssHasNewEpoch() {
   if (!(myGNSS.getPVT() && myGNSS.packetUBXNAVPVT != nullptr))
@@ -158,7 +158,7 @@ bool gnssHasNewEpoch() {
   static uint32_t lastITOW = 0;
   uint32_t currentITOW = myGNSS.packetUBXNAVPVT->data.iTOW;
   if (currentITOW == lastITOW)
-    return false; // Same epoch — nothing new
+    return false; // Same epoch - nothing new
   lastITOW = currentITOW;
   return true;
 }

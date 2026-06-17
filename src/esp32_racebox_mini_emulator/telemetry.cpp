@@ -6,28 +6,12 @@
 #include "ubx_helpers.h"
 #include <string.h> // for memcpy
 
-// --- Packet timing / stats counters — private to this file ---
+// --- Packet timing / stats counters - private to this file ---
 static unsigned long lastReportMs = 0;
 static volatile unsigned int bleSentPacketCount = 0;
 static volatile unsigned int gnssEpochCount = 0;
 
-void telemetryBegin() {
-  pinMode(ONBOARD_LED_PIN, OUTPUT);
-  lastReportMs = millis();
-}
-
-// --- Blink the onboard LED when disconnected, solid when connected ---
-void telemetryUpdateLed() {
-  if (!bleIsConnected()) {
-    static unsigned long lastBlinkMs = 0;
-    if (millis() - lastBlinkMs > LED_BLINK_INTERVAL_MS) {
-      lastBlinkMs = millis();
-      digitalWrite(ONBOARD_LED_PIN, !digitalRead(ONBOARD_LED_PIN));
-    }
-  } else {
-    digitalWrite(ONBOARD_LED_PIN, HIGH);
-  }
-}
+void telemetryBegin() { lastReportMs = millis(); }
 
 // --- Assemble an 88-byte RaceBox Data Message from the latest GNSS + IMU data.
 // Fills packet[0..87] with the UBX header, 80-byte payload, and checksum. ---
@@ -36,16 +20,19 @@ static void buildPacket(uint8_t *packet) {
 
   uint8_t payload[80] = {0};
 
-  // Read fields from the latest PVT solution — a read-only view owned by the
+  // Read fields from the latest PVT solution - a read-only view owned by the
   // GNSS module. Non-null here because we only build after gnssHasNewEpoch().
   const UBX_NAV_PVT_data_t *pvt = gnssLatestPvt();
-  writeLittleEndian(payload, 0, pvt->iTOW);
-  writeLittleEndian(payload, 4, pvt->year);
-  writeLittleEndian(payload, 6, pvt->month);
-  writeLittleEndian(payload, 7, pvt->day);
-  writeLittleEndian(payload, 8, pvt->hour);
-  writeLittleEndian(payload, 9, pvt->min);
-  writeLittleEndian(payload, 10, pvt->sec);
+  // Casts pin each field to its RaceBox protocol wire width (U1/U2/U4/I4),
+  // so the writeLittleEndian overload is correct regardless of the u-blox
+  // library's field types.
+  writeLittleEndian(payload, 0, (uint32_t)pvt->iTOW); // U4
+  writeLittleEndian(payload, 4, (uint16_t)pvt->year); // U2
+  writeLittleEndian(payload, 6, (uint8_t)pvt->month); // U1
+  writeLittleEndian(payload, 7, (uint8_t)pvt->day);   // U1
+  writeLittleEndian(payload, 8, (uint8_t)pvt->hour);  // U1
+  writeLittleEndian(payload, 9, (uint8_t)pvt->min);   // U1
+  writeLittleEndian(payload, 10, (uint8_t)pvt->sec);  // U1
 
   // Offset 11: Validity Flags (RaceBox Protocol)
   uint8_t validityFlags = 0;
@@ -60,13 +47,13 @@ static void buildPacket(uint8_t *packet) {
   writeLittleEndian(payload, 11, validityFlags);
 
   // Offset 12: Time Accuracy (RaceBox Protocol)
-  writeLittleEndian(payload, 12, pvt->tAcc);
+  writeLittleEndian(payload, 12, (uint32_t)pvt->tAcc); // U4
 
   // Offset 16: Nanoseconds (RaceBox Protocol)
-  writeLittleEndian(payload, 16, pvt->nano);
+  writeLittleEndian(payload, 16, (int32_t)pvt->nano); // I4
 
   // Offset 20: Fix Status (RaceBox Protocol)
-  // Protocol only defines 0 (no fix), 2 (2D fix), 3 (3D fix) — clamp any
+  // Protocol only defines 0 (no fix), 2 (2D fix), 3 (3D fix) - clamp any
   // other u-blox fix types (e.g. 1=DR only, 4=GNSS+DR) to 0 (no fix).
   uint8_t safeFixType =
       (pvt->fixType == 2 || pvt->fixType == 3) ? pvt->fixType : 0;
@@ -89,8 +76,7 @@ static void buildPacket(uint8_t *packet) {
   // Offset 22: Date/Time Flags (RaceBox Protocol)
   uint8_t dateTimeFlags = 0;
   if (pvt->valid.bits.validTime)
-    dateTimeFlags |=
-        (1 << 5); // Available confirmation of Date/Time Validity
+    dateTimeFlags |= (1 << 5); // Available confirmation of Date/Time Validity
   if (pvt->valid.bits.validDate)
     dateTimeFlags |= (1 << 6); // Confirmed UTC Date Validity
   if (pvt->valid.bits.validTime && pvt->valid.bits.fullyResolved)
@@ -98,22 +84,20 @@ static void buildPacket(uint8_t *packet) {
   writeLittleEndian(payload, 22, dateTimeFlags);
 
   // Offset 23: Number of SVs (RaceBox Protocol)
-  writeLittleEndian(payload, 23, pvt->numSV);
+  writeLittleEndian(payload, 23, (uint8_t)pvt->numSV); // U1
 
   // Remaining fields, mostly direct mappings from u-blox data
-  writeLittleEndian(payload, 24, pvt->lon);
-  writeLittleEndian(payload, 28, pvt->lat);
-  writeLittleEndian(payload, 32, pvt->height);
-  writeLittleEndian(payload, 36, pvt->hMSL);
-
-  writeLittleEndian(payload, 40, pvt->hAcc);
-  writeLittleEndian(payload, 44, pvt->vAcc);
-  writeLittleEndian(payload, 48, pvt->gSpeed);
-  writeLittleEndian(payload, 52, pvt->headMot);
-  writeLittleEndian(payload, 56, pvt->sAcc);
-  writeLittleEndian(payload, 60, pvt->headAcc);
-
-  writeLittleEndian(payload, 64, pvt->pDOP);
+  writeLittleEndian(payload, 24, (int32_t)pvt->lon);      // I4
+  writeLittleEndian(payload, 28, (int32_t)pvt->lat);      // I4
+  writeLittleEndian(payload, 32, (int32_t)pvt->height);   // I4
+  writeLittleEndian(payload, 36, (int32_t)pvt->hMSL);     // I4
+  writeLittleEndian(payload, 40, (uint32_t)pvt->hAcc);    // U4
+  writeLittleEndian(payload, 44, (uint32_t)pvt->vAcc);    // U4
+  writeLittleEndian(payload, 48, (int32_t)pvt->gSpeed);   // I4
+  writeLittleEndian(payload, 52, (int32_t)pvt->headMot);  // I4
+  writeLittleEndian(payload, 56, (uint32_t)pvt->sAcc);    // U4
+  writeLittleEndian(payload, 60, (uint32_t)pvt->headAcc); // U4
+  writeLittleEndian(payload, 64, (uint16_t)pvt->pDOP);    // U2
 
   // Offset 66: Lat/Lon Flags (RaceBox Protocol)
   uint8_t latLonFlags = 0;
@@ -167,7 +151,7 @@ void telemetrySendPacketIfReady() {
 
 // --- Periodically print packet rate and GNSS/IMU debug stats over serial ---
 void telemetryReport() {
-  // Report packet send rate — runs regardless of GPS state
+  // Report packet send rate - runs regardless of GPS state
   const unsigned long now = millis();
   if ((now - lastReportMs) >= STATS_REPORT_INTERVAL_MS) {
     float elapsed = (now - lastReportMs) / 1000.0;

@@ -5,7 +5,7 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 
-// --- BLE state — private to this file ---
+// --- BLE state - private to this file ---
 static const String deviceName = String(MODEL) + " " + DEVICE_ID;
 
 static BLEServer *pServer = NULL;
@@ -43,6 +43,7 @@ class RxCharacteristicCallbacks : public BLECharacteristicCallbacks {
 };
 
 void bleBegin() {
+  pinMode(ONBOARD_LED_PIN, OUTPUT);
   BLEDevice::init(deviceName.c_str());
   BLEDevice::setPower(BLE_TX_POWER);
   {
@@ -52,7 +53,7 @@ void bleBegin() {
       Serial.printf("✅ BLE TX power set to %d dBm.\n", actualDbm);
     } else {
       Serial.printf(
-          "⚠️  BLE TX power mismatch — requested %d dBm, got %d dBm.\n",
+          "⚠️  BLE TX power mismatch - requested %d dBm, got %d dBm.\n",
           requestedDbm, actualDbm);
     }
   }
@@ -75,7 +76,7 @@ void bleBegin() {
   BLECharacteristic *pModel = pDeviceInfo->createCharacteristic(
       "00002a24-0000-1000-8000-00805f9b34fb", BLECharacteristic::PROPERTY_READ);
   pModel->setValue(MODEL);
-  // Serial number — the 10-digit device ID from config.h
+  // Serial number - the 10-digit device ID from config.h
   BLECharacteristic *pSerial = pDeviceInfo->createCharacteristic(
       "00002a25-0000-1000-8000-00805f9b34fb", BLECharacteristic::PROPERTY_READ);
   pSerial->setValue(DEVICE_ID);
@@ -109,14 +110,50 @@ void bleSendPacket(uint8_t *data, size_t len) {
   pCharacteristicTx->notify();
 }
 
+// --- Drive the onboard LED: solid when connected, blink when disconnected ---
+static void updateLed() {
+  if (!deviceConnected) {
+    static unsigned long lastBlinkMs = 0;
+    if (millis() - lastBlinkMs > LED_BLINK_INTERVAL_MS) {
+      lastBlinkMs = millis();
+      digitalWrite(ONBOARD_LED_PIN, !digitalRead(ONBOARD_LED_PIN));
+    }
+  } else {
+    digitalWrite(ONBOARD_LED_PIN, HIGH);
+  }
+}
+
 void bleUpdate() {
-  // BLE connection state management — runs regardless of GPS state
+  // BLE connection state management - runs regardless of GNSS state. The
+  // re-advertise after a disconnect is deferred (non-blocking): we record when
+  // the disconnect happened and restart advertising on a later loop() pass once
+  // the settle delay has elapsed, rather than blocking the whole loop.
+  static bool reAdvertisePending = false;
+  static unsigned long disconnectMs = 0;
+
+  // Disconnect edge - schedule a re-advertise after the settle delay.
   if (!deviceConnected && oldDeviceConnected) {
-    delay(BLE_READVERTISE_DELAY_MS);
-    pServer->startAdvertising();
+    disconnectMs = millis();
+    reAdvertisePending = true;
     oldDeviceConnected = deviceConnected;
   }
+  // Connect edge - a client is back; cancel any pending re-advertise.
   if (deviceConnected && !oldDeviceConnected) {
+    reAdvertisePending = false;
     oldDeviceConnected = deviceConnected;
   }
+  // Settle delay elapsed - restart advertising. Only clear the pending flag on
+  // success; on failure, leave it set and reset the timer so we retry after
+  // another interval rather than sitting unconnectable until reboot.
+  if (reAdvertisePending &&
+      millis() - disconnectMs >= BLE_READVERTISE_DELAY_MS) {
+    if (BLEDevice::getAdvertising()->start()) {
+      Serial.println("📡 BLE re-advertising started.");
+      reAdvertisePending = false;
+    } else {
+      Serial.println("⚠️  BLE re-advertising failed to start - will retry.");
+      disconnectMs = millis();
+    }
+  }
+  updateLed();
 }

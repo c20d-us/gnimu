@@ -2,16 +2,17 @@
 #include <Arduino.h>
 
 // ============================================================================
-// BLE module — RaceBox-compatible Bluetooth Low Energy server
+// BLE module - RaceBox-compatible Bluetooth Low Energy server
 //
 // Owns the BLE server, characteristics, and connection state internally (see
 // ble.cpp). Callers interact only through the small interface below; the live
 // server objects are never exposed.
 // ============================================================================
 
-// Initialize the BLE device: set TX power, create the RaceBox service and its
-// Tx/Rx characteristics, publish the Device Information Service, and start
-// advertising. Call once in setup(), after the device name is known.
+// Initialize the BLE device: configure the status LED pin, set TX power, create
+// the RaceBox service and its Tx/Rx characteristics, publish the Device
+// Information Service, and start advertising. Call once in setup(), after the
+// device name is known.
 void bleBegin();
 
 // True while a client is connected.
@@ -21,6 +22,7 @@ bool bleIsConnected();
 // Caller is responsible for checking bleIsConnected() first if it cares.
 void bleSendPacket(uint8_t *data, size_t len);
 
-// Service the connection lifecycle — re-advertise after a disconnect and track
-// connect/disconnect edges. Call every loop().
+// Service the connection lifecycle - re-advertise after a disconnect, track
+// connect/disconnect edges, and drive the status LED (solid while connected,
+// blinking while disconnected). Call every loop().
 void bleUpdate();

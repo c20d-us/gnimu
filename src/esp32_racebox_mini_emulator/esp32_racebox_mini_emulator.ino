@@ -10,19 +10,18 @@
 
 void setup() {
   Serial.begin(115200);
+  delay(1000);
   Serial.println("🚀 RaceBox Mini Emulator starting up...");
 
   gnssBegin();
   imuBegin();
-  imuCalibrate();
   bleBegin();
   telemetryBegin();
 }
 
 void loop() {
-  gnssCheck();
-  imuUpdate();
-  telemetryUpdateLed();
+  gnssPoll();
+  imuPoll();
   telemetrySendPacketIfReady();
   telemetryReport();
   bleUpdate();
