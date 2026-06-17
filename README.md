@@ -4,7 +4,7 @@
 [![Platform: ESP32](https://img.shields.io/badge/platform-ESP32-000000.svg)](https://www.espressif.com/en/products/socs/esp32)
 [![Language: C++ (Arduino)](https://img.shields.io/badge/language-C%2B%2B%20(Arduino)-00599C.svg)](https://www.arduino.cc/)
 
-Turn an ESP32 development board, a GNSS module, and an MPU6050 IMU module into a device that looks and behaves like a [RaceBox Mini](https://www.racebox.pro/) GPS performance meter. The official RaceBox app and other RaceBox-compatible tools can connect to it over Bluetooth Low Energy (BLE) and read live position, speed, and motion data.
+Turn an ESP32 development board, a GNSS module, and an MPU6050 IMU module into a device that looks and behaves like a [RaceBox Mini]([https://www.racebox.pro/](https://www.racebox.pro/products/racebox-mini) GPS performance meter. The official RaceBox app and other RaceBox-compatible tools can connect to it over Bluetooth Low Energy (BLE) and read live position, speed, and motion data.
 
 This is a low-cost, hackable platform for experimenting with GNSS and IMU data logging, the RaceBox BLE protocol, and sensor fusion built from off-the-shelf parts.
 
