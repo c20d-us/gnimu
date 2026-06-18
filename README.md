@@ -72,9 +72,9 @@ flowchart LR
 | VCC      | 3V3 |
 | GND      | GND |
 
-**MPU6050 → ESP32 (I²C)**
+**IMU module → ESP32 (I²C)**
 
-| MPU6050 pin | ESP32 pin |
+| IMU pin | ESP32 pin |
 |-------------|-----------|
 | SDA         | GPIO21 (default I²C SDA) |
 | SCL         | GPIO22 (default I²C SCL) |
@@ -83,7 +83,7 @@ flowchart LR
 
 **Status LED:** the onboard LED (GPIO2) blinks while waiting for a BLE connection and stays solid when a client is connected.
 
-> Pin assignments for the GNSS UART and the LED are configurable in [`config.h`](src/esp32_racebox_mini_emulator/config.h). The MPU6050 uses the ESP32's default I²C pins.
+> Pin assignments for the GNSS UART and the LED are configurable in [`config.h`](src/esp32_racebox_mini_emulator/config.h). The IMU uses the ESP32's default I²C pins.
 
 ---
 
