@@ -157,7 +157,7 @@ Photos of the reference build, from loose components to the finished, enclosed u
 ### Arduino IDE
 
 1. Install the ESP32 board package and the libraries listed above.
-2. Open [`src/esp32_racebox_mini_emulator/esp32_racebox_mini_emulator.ino`](src/Gnimu/Gnimu.ino).
+2. Open [`src/Gnimu/Gnimu.ino`](src/Gnimu/Gnimu.ino).
 3. Edit [`config.h`](src/Gnimu/config.h) (at minimum, set your `DEVICE_ID`).
 4. Select your board (e.g. **ESP32 Dev Module**) and the correct serial port.
 5. Click **Upload**.
