@@ -1,14 +1,14 @@
-# RaceBox Mini Emulator
+# Gnimu (nee-moo) - Open Source GNSS + IMU telemetry over BLE
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Platform: ESP32](https://img.shields.io/badge/platform-ESP32-000000.svg)](https://www.espressif.com/en/products/socs/esp32)
 [![Language: C++ (Arduino)](https://img.shields.io/badge/language-C%2B%2B%20(Arduino)-00599C.svg)](https://www.arduino.cc/)
 
-Turn an ESP32 development board, a GNSS module, and an MPU6050 IMU module into a device that looks and behaves like a [RaceBox Mini](https://www.racebox.pro/products/racebox-mini) GPS performance meter. The official RaceBox app and other RaceBox-compatible tools can connect to it over Bluetooth Low Energy (BLE) and read live position, speed, and motion data.
+The code in this repo lets you turn an ESP32 development board, a GNSS module, and an IMU module into a device that emulates the function of a [RaceBox Mini](https://www.racebox.pro/products/racebox-mini) performance meter. The official RaceBox app and other RaceBox-compatible tools should be able to connect to it over Bluetooth Low Energy (BLE) and read live position, speed, and motion data.
 
 This is a low-cost, hackable platform for experimenting with GNSS and IMU data logging, the RaceBox BLE protocol, and sensor fusion built from off-the-shelf parts.
 
-I originally started this project as an emulator built for use with the [AutoX Data Logger for iOS](https://autoxdrivermod.com) app.
+I originally started this project as a streaming GNSS+IMU source for use with the [AutoX Data Logger for iOS](https://autoxdrivermod.com) app.
 
 > [!IMPORTANT]
 > **Unofficial project.** This is an independent, educational, and non-commercial implementation. It is **not affiliated with, endorsed by, or supported by RaceBox.** "RaceBox" and related marks belong to their respective owner. Use this code for learning and personal experimentation only, and at your own risk. Do not use this code to impersonate a genuine device for any commercial or fraudulent purpose.
