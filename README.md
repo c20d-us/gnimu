@@ -4,29 +4,29 @@
 [![Platform: ESP32](https://img.shields.io/badge/platform-ESP32-000000.svg)](https://www.espressif.com/en/products/socs/esp32)
 [![Language: C++ (Arduino)](https://img.shields.io/badge/language-C%2B%2B%20(Arduino)-00599C.svg)](https://www.arduino.cc/)
 
-The code in this repo lets you turn an ESP32 development board, a GNSS module, and an IMU module into a device that emulates the function of a [RaceBox Mini](https://www.racebox.pro/products/racebox-mini) performance meter. The official RaceBox app and other RaceBox-compatible tools should be able to connect to it over Bluetooth Low Energy (BLE) and read live position, speed, and motion data.
+The code in this repo lets you turn an ESP32 development board, a GNSS (Global Navigation Satellite System) module, and an IMU (Inertial Measurement Unit) module into a device that emulates the function of a [RaceBox Mini](https://www.racebox.pro/products/racebox-mini) streaming performance telemetry meter. The official RaceBox app and other RaceBox-compatible tools should be able to connect to it over BLE (Bluetooth Low Energy) and read live position, speed, and motion data at or near 25Hz.
 
 This is a low-cost, hackable platform for experimenting with GNSS and IMU data logging, the RaceBox BLE protocol, and sensor fusion built from off-the-shelf parts.
 
-I originally started this project as a streaming GNSS+IMU source for use with the [AutoX Data Logger for iOS](https://autoxdrivermod.com) app.
+I originally started this project as a streaming GNSS+IMU telemetry source for use with the [AutoX Data Logger for iOS](https://autoxdrivermod.com) app.
 
 > [!IMPORTANT]
-> **Unofficial project.** This is an independent, educational, and non-commercial implementation. It is **not affiliated with, endorsed by, or supported by RaceBox.** "RaceBox" and related marks belong to their respective owner. Use this code for learning and personal experimentation only, and at your own risk. Do not use this code to impersonate a genuine device for any commercial or fraudulent purpose.
+> **Unofficial project.** This is an independent, educational, and non-commercial implementation. It is **not affiliated with, endorsed by, or supported by RaceBox.** "RaceBox" and related marks belong to their respective owner. Use this code for learning and personal purposes only, and at your own risk. Do not use this code to impersonate a genuine device for any commercial or fraudulent purpose.
 
 ---
 
 ## What it does
 
 - Reads a live [**GNSS fix**](https://en.wikipedia.org/wiki/Satellite_navigation) (position, altitude, speed, heading, accuracy, fix status, satellite count) from a u-blox GNSS receiver at up to **25 Hz**.
-- Reads **acceleration and rotation** from an MPU6050 6-axis [**IMU**](https://en.wikipedia.org/wiki/Inertial_measurement_unit), with smoothing and optional gyro-bias calibration at startup.
-- Packs everything into a **RaceBox Data Message** (a u-blox UBX-framed binary packet) and streams it over **BLE** to any RaceBox-compatible client.
+- Reads **acceleration and rotation** from a 6-axis [**IMU**](https://en.wikipedia.org/wiki/Inertial_measurement_unit) at 100Hz with data smoothing, and optional gyro-bias calibration at startup.
+- Packs the GNSS and IMU data into a **RaceBox Data Message** (a u-blox UBX-framed binary packet) and streams it over **BLE** to any RaceBox-compatible client at or near 25Hz.
 - Advertises a BLE **Device Information Service** (model, serial, firmware, hardware, manufacturer) so official apps recognize and pair with it.
 - Prints a human-readable **serial status line** at 1Hz for debugging: packet rate, GNSS data rate, satellite count, fix type, horizontal accuracy, position, and IMU values.
 
 ```mermaid
 flowchart LR
     GNSS["u-blox GNSS module"] -- "UART · 115200 baud" --> ESP32["ESP32"]
-    IMU["MPU6050 accel + gyro"] -- "I²C" --> ESP32
+    IMU["accel + gyro"] -- "I²C" --> ESP32
     ESP32 -- "BLE notify · RaceBox UBX packets" --> App["RaceBox app (phone / tablet)"]
 ```
 
@@ -45,7 +45,7 @@ flowchart LR
   </tr>
   <tr>
     <td><a href="https://www.amazon.com/dp/B0CB5N8RQ8"><strong>u-blox GNSS module</strong></a></td>
-    <td>A u-blox <a href="https://www.u-blox.com/en/product/max-m10-series">M10-class</a> receiver. Reference unit: <a href="https://www.hglrc.com/products/m100-5883-gps">HGLRC M100-5883</a>. Other u-blox modules supported by the SparkFun library should work.</td>
+    <td>A u-blox <a href="https://www.u-blox.com/en/product/max-m10-series">M10-class</a> GNSS receiver. Reference unit: <a href="https://www.hglrc.com/products/m100-5883-gps">HGLRC M100-5883</a>. Other u-blox modules supported by the SparkFun library should work.</td>
   </tr>
   <tr>
     <td><a href="https://www.amazon.com/dp/B01DK83ZYQ"><strong>IMU module</strong></a></td>
