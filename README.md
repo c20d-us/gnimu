@@ -41,7 +41,7 @@ flowchart LR
   </tr>
   <tr>
     <td><a href="https://www.amazon.com/dp/B0DF2YJSHN"><strong>ESP32 dev board</strong></a></td>
-    <td>Developed on an AITRIP ESP32-WROOM-32 Development Board. See the <a href="https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32_datasheet_en.pdf">ESP32-WROOM-32 datasheet</a> for the pinout.</td>
+    <td>Developed on an AITRIP ESP32-WROOM-32 Development Board.</td>
   </tr>
   <tr>
     <td><a href="https://www.amazon.com/dp/B0CB5N8RQ8"><strong>u-blox GNSS module</strong></a></td>
