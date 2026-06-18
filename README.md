@@ -48,7 +48,7 @@ flowchart LR
     <td>A u-blox <a href="https://www.u-blox.com/en/product/max-m10-series">M10-class</a> receiver. Reference unit: <a href="https://www.hglrc.com/products/m100-5883-gps">HGLRC M100-5883</a>. Other u-blox modules supported by the SparkFun library should work.</td>
   </tr>
   <tr>
-    <td><a href="https://www.amazon.com/dp/B01DK83ZYQ"><strong>IMU</strong></a></td>
+    <td><a href="https://www.amazon.com/dp/B01DK83ZYQ"><strong>IMU module</strong></a></td>
     <td>I²C 6-axis accelerometer + gyroscope breakout. Reference unit: HiLetgo GY-521 based on the <a href="https://invensense.tdk.com/products/motion-tracking/6-axis/mpu-6050/">InvenSense MPU-6050</a>.</td>
   </tr>
   <tr>
