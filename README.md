@@ -1,4 +1,4 @@
-# Gnimu (nee-moo) - Open Source GNSS+IMU->BLE telemetry
+# Gnimu (nee-moo) - GNSS + IMU -> BLE telemetry
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Platform: ESP32](https://img.shields.io/badge/platform-ESP32-000000.svg)](https://www.espressif.com/en/products/socs/esp32)
