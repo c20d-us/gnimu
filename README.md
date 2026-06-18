@@ -208,8 +208,8 @@ With the BLE power level set to -12db, I have seen simultaneuous lock on as many
 
 | Symptom | Things to check |
 |---------|-----------------|
-| `Failed to find MPU6050 chip` | I²C wiring (SDA/SCL), 3V3 power, board address. |
-| `GNSS not detected` | UART wiring (note TX↔RX crossover), `GNSS_BAUD` / `FACTORY_GNSS_BAUD`, module power. The sketch will attempt to auto-configure the baud rate. |
+| `Failed to find IMU module` | I²C wiring (SDA/SCL), 3V3 power, board address. |
+| `u-blox GNSS not detected` | UART wiring (note TX↔RX crossover), `GNSS_BAUD` / `FACTORY_GNSS_BAUD`, module power. The sketch will attempt to auto-configure the baud rate. |
 | Few or no satellites | Move outdoors / near a window; lower `BLE_TX_POWER`; give it a cold-start minute. |
 | App won't connect | Confirm `DEVICE_ID` is valid (10 digits, first digit 0–3); make sure no other client is already connected. |
 | Build fails with a `static_assert` message | Read the message — it names the offending `config.h` value and the allowed range. |
@@ -218,9 +218,9 @@ With the BLE power level set to -12db, I have seen simultaneuous lock on as many
 
 ## Credits
 
-This project is a fork and continuation of earlier work by **Anchit Chandra Sekhar** ([github.com/anchit92](https://github.com/anchit92)). Changes in this fork include bug fixes, externalized configuration, a BLE transmit-power control, startup gyro calibration, and modularization of the codebase.
+This project is a major evolution of earlier work by [**Anchit Chandra Sekhar**](https://github.com/anchit92). Changes in this version include bug fixes, externalized configuration, a BLE transmit-power control, startup gyro calibration, and modularization of the codebase.
 
-Protocol details follow the *RaceBox BLE Protocol Description* (rev 8), available from RaceBox at [racebox.pro/products/mini-micro-protocol-documentation](https://www.racebox.pro/products/mini-micro-protocol-documentation).
+Protocol details follow the *RaceBox BLE Protocol Description* (rev 8), [available from RaceBox.](https://www.racebox.pro/products/mini-micro-protocol-documentation).
 
 ---
 
