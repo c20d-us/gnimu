@@ -83,7 +83,7 @@ flowchart LR
 
 **Status LED:** the onboard LED (GPIO2) blinks while waiting for a BLE connection and stays solid when a client is connected.
 
-> Pin assignments for the GNSS UART and the LED are configurable in [`config.h`](src/esp32_racebox_mini_emulator/config.h). The IMU uses the ESP32's default I²C pins.
+> Pin assignments for the GNSS UART and the LED are configurable in [`config.h`](src/Gnimu/config.h). The IMU uses the ESP32's default I²C pins.
 
 ---
 
@@ -157,8 +157,8 @@ Photos of the reference build, from loose components to the finished, enclosed u
 ### Arduino IDE
 
 1. Install the ESP32 board package and the libraries listed above.
-2. Open [`src/esp32_racebox_mini_emulator/esp32_racebox_mini_emulator.ino`](src/esp32_racebox_mini_emulator/esp32_racebox_mini_emulator.ino).
-3. Edit [`config.h`](src/esp32_racebox_mini_emulator/config.h) (at minimum, set your `DEVICE_ID`).
+2. Open [`src/esp32_racebox_mini_emulator/esp32_racebox_mini_emulator.ino`](src/Gnimu/Gnimu.ino).
+3. Edit [`config.h`](src/Gnimu/config.h) (at minimum, set your `DEVICE_ID`).
 4. Select your board (e.g. **ESP32 Dev Module**) and the correct serial port.
 5. Click **Upload**.
 6. Open the **Serial Monitor** at **115200 baud** to watch the startup and status output.
@@ -169,7 +169,7 @@ Photos of the reference build, from loose components to the finished, enclosed u
 
 ## Configuration
 
-All user-tunable settings live in [`config.h`](src/esp32_racebox_mini_emulator/config.h), grouped into sections. Highlights:
+All user-tunable settings live in [`config.h`](src/Gnimu/config.h), grouped into sections. Highlights:
 
 | Setting | Purpose |
 |---------|---------|
